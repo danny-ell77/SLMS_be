@@ -29,6 +29,8 @@ class UserRegistrationView(APIView):
             }
 
             return Response(response, status=status_code)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 class UserLoginView(APIView):
@@ -49,7 +51,8 @@ class UserLoginView(APIView):
             }
 
             return Response(response, status=status_code)
-    # return Response()
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class UserListView(APIView):
     serializer_class = UserListSerializer
@@ -77,3 +80,5 @@ class UserListView(APIView):
 
             }
             return Response(response, status=status.HTTP_200_OK)
+        # return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
