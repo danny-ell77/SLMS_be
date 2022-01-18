@@ -23,7 +23,7 @@ BASE_DIR = Path(__file__).resolve(strict=True).parent.parent
 # See https://docs.djangoproject.com/en/3.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = '%w5fwvuwc=*d3m+k@8wh*jd1h-&(3!i3_-diy$38b7(@h78g*g'
+# SECRET_KEY = '%w5fwvuwc=*d3m+k@8wh*jd1h-&(3!i3_-diy$38b7(@h78g*g'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -92,11 +92,13 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-]
-
 ROOT_URLCONF = 'SIMS.urls'
+
+CORS_ORIGIN_ALLOW_ALL = False
+
+CORS_ORIGIN_WHITELIST = (
+    'https://sims-academic.netlify.app/',
+)
 
 # REST framework settings
 REST_FRAMEWORK = {
