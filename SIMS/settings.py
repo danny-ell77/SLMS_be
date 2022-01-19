@@ -97,7 +97,7 @@ ROOT_URLCONF = 'SIMS.urls'
 CORS_ORIGIN_ALLOW_ALL = False
 
 CORS_ORIGIN_WHITELIST = (
-    'https://sims-academic.netlify.app',
+    'https://sims-academic.herokuapp.com',
 )
 
 # REST framework settings
