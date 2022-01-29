@@ -97,7 +97,8 @@ ROOT_URLCONF = 'SIMS.urls'
 CORS_ORIGIN_ALLOW_ALL = False
 
 CORS_ORIGIN_WHITELIST = (
-    'https://sims-academic.herokuapp.com',
+    'http://localhost:3000',
+    'http://sims-academic.herokuapp.com',
 )
 
 # REST framework settings
