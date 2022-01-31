@@ -35,12 +35,12 @@ class User(AbstractBaseUser, PermissionsMixin, TimestampedModel):
         ('INSTRUCTOR', 'Instructor')
     )
 
-    first_name = models.CharField(max_length=50, blank=True)
-    last_name = models.CharField(max_length=50, blank=True)
+    first_name = models.CharField(max_length=50)
+    last_name = models.CharField(max_length=50)
     email = models.EmailField(unique=True)
     _class = models.ForeignKey(UserClass, on_delete=models.CASCADE)
     role = models.CharField(max_length=12,
-                            choices=ROLE_CHOICES, blank=True, null=True, default=3)
+                            choices=ROLE_CHOICES, default=3)
 
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)

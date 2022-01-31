@@ -53,7 +53,6 @@ class UserLoginSerializer(serializers.Serializer):
             raise serializers.ValidationError("Invalid login credentials")
 
         try:
-
             refresh = RefreshToken.for_user(user)
             # refresh_token = str(refresh)
             token = str(refresh.access_token)
@@ -65,7 +64,6 @@ class UserLoginSerializer(serializers.Serializer):
                 'role': user.role,
                 '_class': user._class.name,
                 'fullname': user.fullname
-
             }
             return validated_data
         except User.DoesNotExist:
