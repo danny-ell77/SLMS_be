@@ -1,8 +1,9 @@
+from turtle import ondrag
 from django.db import models
 from django.contrib.auth.models import PermissionsMixin
 from django.contrib.auth.base_user import AbstractBaseUser
 from django.utils import timezone
-
+import datetime
 from .managers import CustomUserManager
 
 
@@ -63,8 +64,37 @@ class User(AbstractBaseUser, PermissionsMixin, TimestampedModel):
     def __str__(self):
         return self.email
 
-# class Assignment(models.Model):
-#     pass
 
-# class Submissions(models.Model):
-#     pass
+class Assignment(models.Model):
+    title = models.CharField(max_length=300)
+    course = models.CharField(max_length=50)
+    course_code = models.CharField(max_length=10)
+    author = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='assignments')
+    _class = models.ForeignKey(
+        UserClass, on_delete=models.CASCADE, related_name='assignments')
+    duration = models.DateTimeField()
+    status = models.CharField(max_length=15)
+    marks = models.IntegerField()
+
+    def __str__(self):
+        return self.title
+
+
+class Submissions(TimestampedModel, models.Model):
+    assignment = models.ForeignKey(
+        Assignment, on_delete=models.CASCADE, related_name='submissions')
+    author = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='submissions')
+    _class = models.ForeignKey(
+        UserClass, on_delete=models.CASCADE, related_name='submissions')
+    content = models.TextField()
+    title = models.CharField(max_length=255)
+    status = models.CharField(max_length=15)
+    score = models.FloatField()
+
+    is_draft = models.BooleanField(default=False)
+    is_submitted = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.title
