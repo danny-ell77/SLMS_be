@@ -1,19 +1,25 @@
 from django.urls import path
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-)
-
 from api.views import (
+    CookieTokenObtainPairView,
+    CookieTokenRefreshView,
     UserRegistrationView,
     UserLoginView,
-    UserListView
+    UserListView,
+    SubmissionListView,
+    SubmissionsDetailView,
+    AssignmentsDetailView,
+    AssignmentsListView
 )
 
 urlpatterns = [
-    path('token', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('token/refresh', TokenRefreshView.as_view(), name='token_refresh'),
+    path('token', CookieTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('token/refresh', CookieTokenRefreshView.as_view(), name='token_refresh'),
     path('register', UserRegistrationView.as_view(), name='register'),
     path('login', UserLoginView.as_view(), name='login'),
-    path('users', UserListView.as_view(), name='users')
+    path('users', UserListView.as_view(), name='users'),
+
+    path('assignment/<int:id>/', AssignmentsDetailView.as_view()),
+    path('assignments/', AssignmentsListView.as_view()),
+    path('submission/<int:id>/', SubmissionsDetailView.as_view()),
+    path('submissions/', SubmissionListView.as_view()),
 ]

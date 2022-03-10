@@ -1,4 +1,4 @@
-from turtle import ondrag
+from pyexpat import model
 from django.db import models
 from django.contrib.auth.models import PermissionsMixin
 from django.contrib.auth.base_user import AbstractBaseUser
@@ -26,27 +26,23 @@ class UserClass(TimestampedModel):
     def __str__(self) -> str:
         return self.name
 
-
 # To be used explicitly for Authentication, Authorization & Permisions
-class User(AbstractBaseUser, PermissionsMixin, TimestampedModel):
 
-    ROLE_CHOICES = (
-        ('ADMIN', 'Admin'),
-        ('STUDENT', 'Student'),
-        ('INSTRUCTOR', 'Instructor')
-    )
+
+class User(AbstractBaseUser, PermissionsMixin, TimestampedModel):
 
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)
     email = models.EmailField(unique=True)
     _class = models.ForeignKey(UserClass, on_delete=models.CASCADE)
-    role = models.CharField(max_length=12,
-                            choices=ROLE_CHOICES, default=3)
 
+    is_student = models.BooleanField(default=False)
+    is_instructor = models.BooleanField(default=False)
     is_staff = models.BooleanField(default=False)
+    is_superuser = models.BooleanField(default=False)
+
     is_active = models.BooleanField(default=True)
     is_deleted = models.BooleanField(default=False)
-    is_superuser = models.BooleanField(default=False)
 
     def _get_fullname(self):
         fullname = f"{self.first_name} {self.last_name}"
@@ -65,6 +61,15 @@ class User(AbstractBaseUser, PermissionsMixin, TimestampedModel):
         return self.email
 
 
+class Student(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    _class = models.ForeignKey(UserClass, on_delete=models.CASCADE)
+
+
+class Instructor(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+
+
 class Assignment(models.Model):
     title = models.CharField(max_length=300)
     course = models.CharField(max_length=50)
@@ -73,7 +78,7 @@ class Assignment(models.Model):
         User, on_delete=models.CASCADE, related_name='assignments')
     _class = models.ForeignKey(
         UserClass, on_delete=models.CASCADE, related_name='assignments')
-    duration = models.DateTimeField()
+    # duration = models.DateTimeField(blank=True)
     status = models.CharField(max_length=15)
     marks = models.IntegerField()
 
