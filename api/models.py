@@ -1,10 +1,6 @@
-from pyexpat import model
 from django.db import models
-from django.contrib.auth.models import PermissionsMixin
-from django.contrib.auth.base_user import AbstractBaseUser
-from django.utils import timezone
-import datetime
-from .managers import CustomUserManager
+from django.contrib.auth.models import AbstractUser
+from api.managers import UserManager
 
 
 class TimestampedModel(models.Model):
@@ -16,7 +12,7 @@ class TimestampedModel(models.Model):
         ordering = ['-created_date', '-modified_date']
 
 
-class UserClass(TimestampedModel):
+class ClassRoom(TimestampedModel):
     name = models.CharField(verbose_name='class_name',
                             max_length=20, unique=True, blank=False)
 
@@ -26,15 +22,13 @@ class UserClass(TimestampedModel):
     def __str__(self) -> str:
         return self.name
 
-# To be used explicitly for Authentication, Authorization & Permisions
 
+class User(AbstractUser, TimestampedModel):
 
-class User(AbstractBaseUser, PermissionsMixin, TimestampedModel):
-
-    first_name = models.CharField(max_length=50)
-    last_name = models.CharField(max_length=50)
+    username = None
+    firstname = models.CharField(max_length=50)
+    lastname = models.CharField(max_length=50)
     email = models.EmailField(unique=True)
-    _class = models.ForeignKey(UserClass, on_delete=models.CASCADE)
 
     is_student = models.BooleanField(default=False)
     is_instructor = models.BooleanField(default=False)
@@ -45,7 +39,7 @@ class User(AbstractBaseUser, PermissionsMixin, TimestampedModel):
     is_deleted = models.BooleanField(default=False)
 
     def _get_fullname(self):
-        fullname = f"{self.first_name} {self.last_name}"
+        fullname = f"{self.firstname} {self.lastname}"
         return fullname
 
     @property
@@ -53,9 +47,9 @@ class User(AbstractBaseUser, PermissionsMixin, TimestampedModel):
         return self._get_fullname()
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['_class']
+    REQUIRED_FIELDS = []
 
-    objects = CustomUserManager()
+    objects = UserManager()
 
     def __str__(self):
         return self.email
@@ -63,7 +57,7 @@ class User(AbstractBaseUser, PermissionsMixin, TimestampedModel):
 
 class Student(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    _class = models.ForeignKey(UserClass, on_delete=models.CASCADE)
+    classroom = models.ForeignKey(ClassRoom, on_delete=models.CASCADE)
 
 
 class Instructor(models.Model):
@@ -76,8 +70,8 @@ class Assignment(models.Model):
     course_code = models.CharField(max_length=10)
     author = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name='assignments')
-    _class = models.ForeignKey(
-        UserClass, on_delete=models.CASCADE, related_name='assignments')
+    classroom = models.ForeignKey(
+        ClassRoom, on_delete=models.CASCADE, related_name='assignments')
     # duration = models.DateTimeField(blank=True)
     status = models.CharField(max_length=15)
     marks = models.IntegerField()
@@ -91,8 +85,8 @@ class Submissions(TimestampedModel, models.Model):
         Assignment, on_delete=models.CASCADE, related_name='submissions')
     author = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name='submissions')
-    _class = models.ForeignKey(
-        UserClass, on_delete=models.CASCADE, related_name='submissions')
+    classroom = models.ForeignKey(
+        ClassRoom, on_delete=models.CASCADE, related_name='submissions')
     content = models.TextField()
     title = models.CharField(max_length=255)
     status = models.CharField(max_length=15)

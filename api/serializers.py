@@ -1,5 +1,5 @@
 from jwt import InvalidTokenError
-from .models import Assignment, Submissions, User, UserClass
+from .models import Assignment, ClassRoom, Instructor, Student, Submissions, User
 from rest_framework import serializers
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import update_last_login
@@ -19,26 +19,31 @@ class CookieTokenRefreshSerializer(TokenRefreshSerializer):
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
-    _class = serializers.CharField(max_length=10)
+    classroom = serializers.CharField(max_length=10)
 
     class Meta:
         model = User
         fields = (
-            'first_name',
-            'last_name',
+            'firstname',
+            'lastname',
             'email',
+            'is_student',
+            'is_instructor',
             'password',
-            '_class',
-            'role',
+            'classroom'
         )
         extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
         print(f"validated_data ==> {validated_data}")
-        class_instance = UserClass.objects.get(name=validated_data['_class'])
-        validated_data['_class'] = class_instance
-        auth_user = User.objects.create_user(**validated_data)
-        return auth_user
+        classroom = validated_data.pop('classroom')
+        user = User.objects.create(**validated_data)
+        if validated_data.get('is_student') != None:
+            user_class = ClassRoom.objects.get(name=classroom)
+            Student.objects.create(user=user, classroom=user_class)
+        if validated_data.get('is_instructor') != None:
+            Instructor.objects.create(user)
+        return user
 
 
 class UserLoginSerializer(serializers.Serializer):
@@ -46,31 +51,34 @@ class UserLoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(max_length=128, write_only=True)
     fullname = serializers.CharField(read_only=True)
-    token = serializers.CharField(read_only=True)
-    refresh = serializers.CharField(read_only=True)
-    role = serializers.CharField(read_only=True)
-    _class = serializers.CharField(read_only=True, max_length=20)
+    classroom = serializers.CharField(read_only=True, max_length=20)
     # submissions = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     # assignments = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
 
-    def validate(self, data):
-        email = data['email']
-        password = data['password']
+    def validate(self, attrs):
+        email = attrs['email']
+        password = attrs['password']
         user = authenticate(email=email, password=password)
 
         if user is None:
-            raise serializers.ValidationError("Email or password incorrect!")
+            raise serializers.ValidationError(
+                "Email or password is incorrect!")
+
+        if user.is_student:
+            student = Student.objects.get(user=user)
+        else:
+            student = None
 
         try:
-            # refresh_token = str(refresh)
             update_last_login(None, user)
-            data.update(
+            attrs.update(
                 id=user.pk,
-                role=user.role,
-                _class=user._class.name,
-                fullname=user.fullname
+                is_student=user.is_student,
+                is_instructor=user.is_instructor,
+                fullname=user.fullname,
+                student=student
             )
-            return data
+            return attrs
         except User.DoesNotExist:
             raise serializers.ValidationError("Email or password incorrect")
 
@@ -88,23 +96,23 @@ class AssignmentSerializer(serializers.ModelSerializer):
     submissions = serializers.StringRelatedField(many=True, read_only=True)
     author_id = serializers.PrimaryKeyRelatedField(
         queryset=User.objects.all(), many=False)
-    _class_id = serializers.PrimaryKeyRelatedField(
-        queryset=UserClass.objects.all(), many=False)
+    classrom_id = serializers.PrimaryKeyRelatedField(
+        queryset=ClassRoom.objects.all(), many=False)
 
     class Meta:
         model = Assignment
         fields = ('title', 'course', 'course_code', 'author_id',
-                  '_class_id', 'status', 'marks', 'submissions')
+                  'classrom_id', 'status', 'marks', 'submissions')
 
     def create(self, data):
         author = data['author_id']
-        _class = data['_class_id']
+        classroom = data['classrom_id']
         print(data)
         # user = User.objects.get(pk=author)
         if author.role == 'STUDENT' or author is None:
             raise serializers.ValidationError(
                 'Only Instructors can create assignments')
-        data.update(author_id=author.id, _class_id=_class.id)
+        data.update(author_id=author.id, classrom_id=classroom.id)
         return data
 
 
@@ -113,12 +121,12 @@ class SubmissionSerializer(serializers.ModelSerializer):
         queryset=Assignment.objects.all(), many=False)
     author = serializers.PrimaryKeyRelatedField(
         queryset=User.objects.all(),  many=False)
-    _class = serializers.PrimaryKeyRelatedField(
-        queryset=UserClass.objects.all(), many=False)
+    classroom = serializers.PrimaryKeyRelatedField(
+        queryset=ClassRoom.objects.all(), many=False)
 
     class Meta:
         model = Submissions
-        fields = ('assignment', 'author', '_class', 'content',
+        fields = ('assignment', 'author', 'classroom', 'content',
                   'title', 'status', 'score', 'is_draft', 'is_submitted')
 
     def create(self, data):

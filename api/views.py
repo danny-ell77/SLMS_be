@@ -1,7 +1,4 @@
-from os import access
-from tokenize import cookie_re
-from turtle import st
-
+from django.conf import settings
 from django.http import Http404
 from rest_framework import authentication, permissions, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -10,10 +7,18 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.views import (TokenObtainPairView,
                                             TokenRefreshView)
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import Assignment, Submissions, User, UserClass
+from .models import Assignment, Submissions, User, ClassRoom
 from .serializers import (AssignmentSerializer, CookieTokenRefreshSerializer,
                           SubmissionSerializer, UserListSerializer,
                           UserLoginSerializer, UserRegistrationSerializer)
+
+cookie_details = dict(
+    key=settings.SIMPLE_JWT['AUTH_COOKIE'],
+    expires=settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'],
+    secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
+    httponly=settings.SIMPLE_JWT['AUTH_COOKIE_HTTP_ONLY'],
+    samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE']
+)
 
 
 def get_tokens_for_user(user):
@@ -24,24 +29,13 @@ def get_tokens_for_user(user):
     )
 
 
-class CookieTokenObtainPairView(TokenObtainPairView):
-    def finalize_response(self, request, response, *args, **kwargs):
-        if response.data.get('token'):
-            cookie_max_age = 3600 * 24 * 14  # 14 days
-            response.set_cookie(
-                'refresh_token', response.data['refresh_token'], max_age=cookie_max_age, httpOnly=True)
-            del response.data['refresh_token']
-        return super().finalize_response(request, response, *args, **kwargs)
-
-
 class CookieTokenRefreshView(TokenRefreshView):
     serializer_class = CookieTokenRefreshSerializer
 
     def finalize_response(self, request, response, *args, **kwargs):
         if response.data.get('refresh'):
-            cookie_max_age = 3600 * 24 * 14  # 14 days
             response.set_cookie(
-                'refresh_token', response.data['refresh'], max_age=cookie_max_age, httponly=True)
+                value=response.data["refresh"], **cookie_details)
             del response.data['refresh']
         return super().finalize_response(request, response, *args, **kwargs)
 
@@ -53,13 +47,16 @@ class UserLoginView(APIView):
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
         valid = serializer.is_valid(raise_exception=True)
-
+        response = Response()
         if valid:
             status_code = status.HTTP_200_OK
-
+            user = User.objects.get(pk=serializer.data.id)
+            auth_tokens = get_tokens_for_user(user)
+            response.set_cookie(value=auth_tokens["refresh"], **cookie_details)
             response = {
                 'success': True,
-                'message': 'succesful login!',
+                'message': 'You have logged in successfully',
+                'token': auth_tokens["access"],
                 'user': serializer.data
             }
 
@@ -76,46 +73,19 @@ class UserRegistrationView(APIView):
         valid = serializer.is_valid(raise_exception=True)
 
         if valid:
-            serializer.save()
+            user = serializer.save()
             status_code = status.HTTP_201_CREATED
-
+            auth_tokens = get_tokens_for_user(user)
+            response.set_cookie(value=auth_tokens["refresh"], **cookie_details)
             response = {
                 'success': True,
-                'message': 'User successfully registered!',
+                'message': 'Registration complete, welcome to SIMS!',
+                'token': auth_tokens["access"],
                 'user': serializer.data
             }
 
             return Response(response, status=status_code)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class UserListView(APIView):
-    serializer_class = UserListSerializer
-    permission_classes = (IsAuthenticated,)
-
-    def get(self, request):
-        # print(dir(request.user))
-        id = request.user.pk
-        user = User.objects.get(pk=id)
-        if user.role != 'ADMIN':
-            response = {
-                'success': False,
-                'status_code': status.HTTP_403_FORBIDDEN,
-                'message': 'You are not authorized to perform this action'
-            }
-            return Response(response, status.HTTP_403_FORBIDDEN)
-        else:
-            users = User.objects.all()
-            serializer = self.serializer_class(users, many=True)
-            response = {
-                'success': True,
-                'status_code': status.HTTP_200_OK,
-                'message': 'Successfully fetched users',
-                'users': serializer.data
-
-            }
-            return Response(response, status=status.HTTP_200_OK)
-        # return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class SubmissionListView(APIView):
@@ -129,8 +99,8 @@ class SubmissionListView(APIView):
 
     def get_user_class(self, id):
         try:
-            return UserClass.objects.get(pk=id)
-        except UserClass.DoesNotExist:
+            return ClassRoom.objects.get(pk=id)
+        except ClassRoom.DoesNotExist:
             raise Http404
 
     def get(self, request):
@@ -138,7 +108,7 @@ class SubmissionListView(APIView):
         if user.role == "INSTRUCTOR":
             submissions = Submissions.objects.get(lecturer=user.id)
         else:
-            class_instance = request.user._class
+            class_instance = request.user.classroom
             user_class = self.get_user_class(class_instance.id)
             submissions = user_class.submissions.all()
         serializer = self.serializer_class(submissions, many=True)
@@ -201,8 +171,8 @@ class AssignmentsListView(APIView):
         if user.role == "INSTRUCTOR":
             assignments = Assignment.objects.get(author_id=user.pk)
         else:
-            _class_id = user._class.id
-            assignments = Assignment.objects.get(_class=_class_id)
+            classrom_id = user.classroom.id
+            assignments = Assignment.objects.get(classroom=classrom_id)
         serializer = self.serializer_class(assignments, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
