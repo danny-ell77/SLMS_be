@@ -1,5 +1,5 @@
 from django.contrib import admin
-from api.models import User, ClassRoom
+from api.models import User, ClassRoom, Assignment
 
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
@@ -27,7 +27,8 @@ class UserAdmin(DjangoUserAdmin):
     )
     list_display = ('email', 'firstname', 'lastname', 'is_staff')
     search_fields = ('email', 'firstname', 'lastname')
-    ordering = ('email',)
+    ordering = ('pk',)
 
 
 admin.site.register(ClassRoom)
+admin.site.register(Assignment)

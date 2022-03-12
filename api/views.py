@@ -19,13 +19,14 @@ cookie_details = dict(
     httponly=settings.SIMPLE_JWT['AUTH_COOKIE_HTTP_ONLY'],
     samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE']
 )
+print(cookie_details)
 
 
 def get_tokens_for_user(user):
     refresh = RefreshToken.for_user(user)
     return dict(
         refresh=str(refresh),
-        access=str(refresh.access)
+        access=str(refresh.access_token)
     )
 
 
@@ -47,20 +48,20 @@ class UserLoginView(APIView):
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
         valid = serializer.is_valid(raise_exception=True)
-        response = Response()
         if valid:
-            status_code = status.HTTP_200_OK
-            user = User.objects.get(pk=serializer.data.id)
+            user = User.objects.get(pk=serializer.data['pk'])
             auth_tokens = get_tokens_for_user(user)
+            response = Response()
             response.set_cookie(value=auth_tokens["refresh"], **cookie_details)
-            response = {
+            print(response)
+            response.data = {
                 'success': True,
                 'message': 'You have logged in successfully',
                 'token': auth_tokens["access"],
                 'user': serializer.data
             }
-
-            return Response(response, status=status_code)
+            response.status_code = status.HTTP_200_OK
+            return response
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -73,18 +74,19 @@ class UserRegistrationView(APIView):
         valid = serializer.is_valid(raise_exception=True)
 
         if valid:
+            response = Response()
             user = serializer.save()
-            status_code = status.HTTP_201_CREATED
             auth_tokens = get_tokens_for_user(user)
             response.set_cookie(value=auth_tokens["refresh"], **cookie_details)
-            response = {
+            response.data = {
                 'success': True,
                 'message': 'Registration complete, welcome to SIMS!',
                 'token': auth_tokens["access"],
                 'user': serializer.data
             }
+            response.status_code = status.HTTP_201_CREATED
 
-            return Response(response, status=status_code)
+            return response
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -105,7 +107,7 @@ class SubmissionListView(APIView):
 
     def get(self, request):
         user = request.user
-        if user.role == "INSTRUCTOR":
+        if user.is_instructor:
             submissions = Submissions.objects.get(lecturer=user.id)
         else:
             class_instance = request.user.classroom
@@ -168,7 +170,8 @@ class AssignmentsListView(APIView):
 
     def get(self, request):
         user = request.user
-        if user.role == "INSTRUCTOR":
+        # pprint(user)
+        if user.is_instructor:
             assignments = Assignment.objects.get(author_id=user.pk)
         else:
             classrom_id = user.classroom.id
