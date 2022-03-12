@@ -28,7 +28,7 @@ class StudentSerializer(serializers.ModelSerializer):
 
 class UserRegistrationSerializer(serializers.Serializer):
     student = StudentSerializer(read_only=True)
-    classroom = serializers.CharField(write_only=True)
+    classroom = serializers.CharField(write_only=True, allow_blank=True)
     pk = serializers.CharField(read_only=True, max_length=255)
     email = serializers.EmailField()
     password = serializers.CharField(max_length=128, write_only=True)
@@ -44,11 +44,11 @@ class UserRegistrationSerializer(serializers.Serializer):
         user = User.objects.filter(email=validated_data['email']).first()
         if not user:
             user = User.objects.create_user(**validated_data)
-            if validated_data.get('is_student') != None:
+            if validated_data.get('is_student') == True:
                 user_class = ClassRoom.objects.get(name=classroom)
                 Student.objects.create(user=user, classroom=user_class)
-            elif validated_data.get('is_instructor') != None:
-                Instructor.objects.create(user)
+            elif validated_data.get('is_instructor') == True:
+                Instructor.objects.create(user=user)
             return user
         else:
             raise serializers.ValidationError(
@@ -117,17 +117,21 @@ class AssignmentSerializer(serializers.ModelSerializer):
         fields = ('id', 'title', 'course', 'course_code', 'author',
                   'classroom', 'status', 'marks', 'submissions')
 
-    def validate(self, data):
-        author = data['author']
-        assignment = Assignment.objects.filter(title=data.get('title')).first()
-        print(data, author.is_staff)
+    def create(self, validated_data):
+        assignment = Assignment.objects.filter(
+            title=validated_data.get('title')).first()
         if assignment:
             raise serializers.ValidationError(
                 'This assignment already exists!')
-        if author.is_student or author is None:
-            raise serializers.ValidationError(
-                'Only Instructors can create assignments')
-        return data
+        return super().create(validated_data)
+
+    # def validate(self, data):
+    #     author = data['author']
+    #     print(data, author.is_student)
+    #     if author.is_student:
+    #         raise serializers.ValidationError(
+    #             'Only Instructors can create or update Assignments')
+    #     return data
 
 
 class SubmissionSerializer(serializers.ModelSerializer):

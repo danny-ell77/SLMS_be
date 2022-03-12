@@ -1,5 +1,7 @@
+from urllib import response
 from django.conf import settings
 from django.http import Http404
+from pprint import pprint
 from rest_framework import authentication, permissions, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -166,18 +168,23 @@ class AssignmentsListView(APIView):
     Only Students can create assignments
     '''
     serializer_class = AssignmentSerializer
-    # authentication_classes = [authentication.TokenAuthentication]
 
     def get(self, request):
-        user = request.user
-        # pprint(user)
+        auth_user = request.user
+        # pprint(dir(user))
+        user = User.objects.get(pk=auth_user.pk)
         if user.is_instructor:
             assignments = Assignment.objects.get(author_id=user.pk)
         else:
-            classrom_id = user.classroom.id
-            assignments = Assignment.objects.get(classroom=classrom_id)
+            classrom_id = user.student.classroom.id
+            assignments = Assignment.objects.filter(classroom=classrom_id)
         serializer = self.serializer_class(assignments, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        response_data = {
+            'success': True,
+            'message': 'Assignments fetched successfully',
+            'data': serializer.data
+        }
+        return Response(response_data, status=status.HTTP_200_OK)
 
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
@@ -205,15 +212,19 @@ class AssignmentsDetailView(APIView):
         serializer = self.serializer_class(assignment)
         return Response(serializer.data)
 
-    def put(self, request, id):
-        assignment = self.get_object(id)
-        serializer = self.serializer_class(assignment, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def patch(self, request, id):
+        user = User.objects.get(pk=request.user.pk)
+        if user.is_instructor:
+            assignment = self.get_object(id)
+            serializer = self.serializer_class(assignment, data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': 'Only Instructors can Update Assignments'}, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, id):
+        print(id)
         assignment = self.get_object(id)
         assignment.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

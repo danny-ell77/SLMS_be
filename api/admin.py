@@ -1,11 +1,11 @@
 from django.contrib import admin
-from api.models import User, ClassRoom, Assignment
+from api.models import User, ClassRoom, Assignment, Submissions
 
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.utils.translation import ugettext_lazy as _
 
-from .models import User
+from .models import Instructor, Student, User
 
 
 @admin.register(User)
@@ -30,5 +30,8 @@ class UserAdmin(DjangoUserAdmin):
     ordering = ('pk',)
 
 
+admin.site.register(Student)
+admin.site.register(Instructor)
 admin.site.register(ClassRoom)
 admin.site.register(Assignment)
+admin.site.register(Submissions)
