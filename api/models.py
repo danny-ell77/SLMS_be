@@ -69,8 +69,8 @@ class Assignment(models.Model):
     title = models.CharField(max_length=300)
     course = models.CharField(max_length=50)
     course_code = models.CharField(max_length=10)
-    author = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='assignments')
+    instructor = models.ForeignKey(
+        Instructor, on_delete=models.CASCADE, related_name='assignments')
     classroom = models.ForeignKey(
         ClassRoom, on_delete=models.CASCADE, related_name='assignments')
     # duration = models.DateTimeField(blank=True)
@@ -81,17 +81,21 @@ class Assignment(models.Model):
         return self.title
 
 
-class Submissions(TimestampedModel, models.Model):
+class Submission(TimestampedModel, models.Model):
+    content = models.TextField(blank=True)
+    title = models.CharField(max_length=255, blank=False)
+    status = models.CharField(max_length=15, blank=True)
+    score = models.FloatField(default=0.0)
     assignment = models.ForeignKey(
         Assignment, on_delete=models.CASCADE, related_name='submissions')
-    author = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='submissions')
+    # author = models.ForeignKey(
+    #     User, on_delete=models.CASCADE, related_name='submissions')
+    student = models.ForeignKey(
+        Student, on_delete=models.CASCADE, related_name='submissions')
+    instructor = models.ForeignKey(
+        Instructor, on_delete=models.CASCADE, related_name='submissions')
     classroom = models.ForeignKey(
         ClassRoom, on_delete=models.CASCADE, related_name='submissions')
-    content = models.TextField()
-    title = models.CharField(max_length=255)
-    status = models.CharField(max_length=15)
-    score = models.FloatField()
 
     is_draft = models.BooleanField(default=False)
     is_submitted = models.BooleanField(default=False)

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from api.models import User, ClassRoom, Assignment, Submissions
+from api.models import User, ClassRoom, Assignment, Submission
 
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
@@ -15,8 +15,10 @@ class UserAdmin(DjangoUserAdmin):
     fieldsets = (
         (None, {'fields': ('email', 'password')}),
         (_('Personal info'), {'fields': ('firstname', 'lastname')}),
-        (_('Permissions'), {'fields': ('is_active', 'is_staff', 'is_superuser',
-                                       'groups', 'user_permissions')}),
+        (_('Permissions'), {
+         'fields': ('is_active', 'is_staff', 'is_superuser',)}),
+        #    'groups', 'user_permissions')}),
+        (_('User Category'), {'fields': ('is_student', 'is_instructor')}),
         (_('Important dates'), {'fields': ('last_login', 'date_joined')}),
     )
     add_fieldsets = (
@@ -25,7 +27,8 @@ class UserAdmin(DjangoUserAdmin):
             'fields': ('email', 'password1', 'password2'),
         }),
     )
-    list_display = ('email', 'firstname', 'lastname', 'is_staff')
+    list_display = ('email', 'firstname', 'lastname',
+                    'is_staff', 'is_instructor', 'is_student',)
     search_fields = ('email', 'firstname', 'lastname')
     ordering = ('pk',)
 
@@ -34,4 +37,4 @@ admin.site.register(Student)
 admin.site.register(Instructor)
 admin.site.register(ClassRoom)
 admin.site.register(Assignment)
-admin.site.register(Submissions)
+admin.site.register(Submission)
