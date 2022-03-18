@@ -102,3 +102,12 @@ class Submission(TimestampedModel, models.Model):
 
     def __str__(self):
         return self.title
+
+
+class CourseMaterial(models.Model):
+    name = models.CharField(max_length=50)
+    description = models.CharField(max_length=120)
+    file_link = models.URLField(max_length=300, unique=True)
+
+    def __str__(self):
+        return self.name

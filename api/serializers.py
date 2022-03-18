@@ -76,7 +76,7 @@ class StudentSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(read_only=True)
     classroom = ClassRoomSerializer()
     # submissions = serializers.StringRelatedField(many=True)
-    submissions = SubmissionSerializer(read_only=True, many=True)
+    submissions = serializers.StringRelatedField(read_only=True, many=True)
 
     class Meta:
         model = Student

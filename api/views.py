@@ -262,7 +262,12 @@ class SubmissionsDetailView(APIView):
             }
             return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
 
-    def delete(self, request):
+    def delete(self, request, id):
+        print(id)
         submission = self.get_object(id)
         submission.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        response_data = {
+            'success': True,
+            'message': 'Submission deleted successfully',
+        }
+        return Response(response_data, status=status.HTTP_204_NO_CONTENT)
