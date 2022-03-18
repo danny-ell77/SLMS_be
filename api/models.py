@@ -107,6 +107,7 @@ class Submission(TimestampedModel, models.Model):
 class CourseMaterial(models.Model):
     name = models.CharField(max_length=50)
     description = models.CharField(max_length=120)
+    course = models.CharField(max_length=120)
     file_link = models.URLField(max_length=300, unique=True)
 
     def __str__(self):
