@@ -55,17 +55,17 @@ class User(AbstractUser, TimestampedModel):
         return self.email
 
 
-class Student(models.Model):
+class Student(TimestampedModel, models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     classroom = models.ForeignKey(
         ClassRoom, on_delete=models.CASCADE, related_name='student')
 
 
-class Instructor(models.Model):
+class Instructor(TimestampedModel, models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
 
 
-class Assignment(models.Model):
+class Assignment(TimestampedModel, models.Model):
     title = models.CharField(max_length=300)
     course = models.CharField(max_length=50)
     course_code = models.CharField(max_length=10)
@@ -104,7 +104,7 @@ class Submission(TimestampedModel, models.Model):
         return self.title
 
 
-class CourseMaterial(models.Model):
+class CourseMaterial(TimestampedModel, models.Model):
     name = models.CharField(max_length=50)
     description = models.CharField(max_length=120)
     course = models.CharField(max_length=120)
