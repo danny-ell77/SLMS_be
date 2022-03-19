@@ -30,7 +30,7 @@ class CookieTokenRefreshSerializer(TokenRefreshSerializer):
             refresh.access_token.lifetime.total_seconds())
 
         if attrs['refresh']:
-            return super().validate(attrs)
+            return attrs
         else:
             raise InvalidTokenError(
                 'No valid token found in cookie  \'refresh_token\'')
