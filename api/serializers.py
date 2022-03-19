@@ -1,4 +1,5 @@
 from dataclasses import field
+from os import access
 from jwt import InvalidTokenError
 from .models import Assignment, ClassRoom, Instructor, Student, Submission, User
 from rest_framework import serializers
@@ -25,9 +26,10 @@ class CookieTokenRefreshSerializer(TokenRefreshSerializer):
 
     def validate(self, attrs):
         attrs['refresh'] = self.context['request'].COOKIES.get('refresh_token')
-        refresh = RefreshToken(attrs['refresh'])
+        access = RefreshToken(attrs['refresh'])
         attrs['lifetime'] = int(
-            refresh.access_token.lifetime.total_seconds())
+            access.access_token.lifetime.total_seconds())
+        attrs['access'] = access.access_token
 
         if attrs['refresh']:
             return attrs
