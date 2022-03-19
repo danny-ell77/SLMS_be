@@ -12,13 +12,13 @@ class CookieTokenRefreshSerializer(TokenRefreshSerializer):
     refresh = None
 
     def validate(self, attrs):
-        data = super().validate(attrs)
-        data['refresh'] = self.context['request'].COOKIES.get('refresh_token')
-        if data['refresh']:
-            refresh = RefreshToken(data['refresh'])
-            data['lifetime'] = int(
+        # data = super().validate(attrs)
+        attrs['refresh'] = self.context['request'].COOKIES.get('refresh_token')
+        if attrs['refresh']:
+            refresh = RefreshToken(attrs['refresh'])
+            attrs['lifetime'] = int(
                 refresh.access_token.lifetime.total_seconds())
-            return data
+            return attrs
         else:
             raise InvalidTokenError(
                 'No valid token found in cookie  \'refresh_token\'')
