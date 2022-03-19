@@ -11,14 +11,26 @@ from rest_framework_simplejwt.tokens import RefreshToken
 class CookieTokenRefreshSerializer(TokenRefreshSerializer):
     refresh = None
 
+    # def soms_validate(self, attrs):
+    #     # data = super().validate(attrs)
+    #     attrs['refresh'] = self.context['request'].COOKIES.get('refresh_token')
+    #     if attrs['refresh']:
+    #         refresh = RefreshToken(attrs['refresh'])
+    #         attrs['lifetime'] = int(
+    #             refresh.access_token.lifetime.total_seconds())
+    #         return attrs
+    #     else:
+    #         raise InvalidTokenError(
+    #             'No valid token found in cookie  \'refresh_token\'')
+
     def validate(self, attrs):
-        # data = super().validate(attrs)
         attrs['refresh'] = self.context['request'].COOKIES.get('refresh_token')
+        refresh = RefreshToken(attrs['refresh'])
+        attrs['lifetime'] = int(
+            refresh.access_token.lifetime.total_seconds())
+
         if attrs['refresh']:
-            refresh = RefreshToken(attrs['refresh'])
-            attrs['lifetime'] = int(
-                refresh.access_token.lifetime.total_seconds())
-            return attrs
+            return super().validate(attrs)
         else:
             raise InvalidTokenError(
                 'No valid token found in cookie  \'refresh_token\'')
