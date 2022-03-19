@@ -26,10 +26,10 @@ class CookieTokenRefreshSerializer(TokenRefreshSerializer):
 
     def validate(self, attrs):
         attrs['refresh'] = self.context['request'].COOKIES.get('refresh_token')
-        access = RefreshToken(attrs['refresh'])
+        refresh = RefreshToken(attrs['refresh'])
         attrs['lifetime'] = int(
-            access.access_token.lifetime.total_seconds())
-        attrs['access'] = access.access_token
+            refresh.access_token.lifetime.total_seconds())
+        attrs['access'] = str(refresh.access_token)
 
         if attrs['refresh']:
             return attrs
