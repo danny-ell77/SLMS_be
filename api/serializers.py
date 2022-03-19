@@ -5,15 +5,20 @@ from rest_framework import serializers
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import update_last_login
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
+from rest_framework_simplejwt.tokens import RefreshToken
 
 
 class CookieTokenRefreshSerializer(TokenRefreshSerializer):
     refresh = None
 
     def validate(self, attrs):
-        attrs['refresh'] = self.context['request'].COOKIES.get('refresh_token')
-        if attrs['refresh']:
-            return super().validate(attrs)
+        data = super().validate(attrs)
+        data['refresh'] = self.context['request'].COOKIES.get('refresh_token')
+        if data['refresh']:
+            refresh = RefreshToken(data['refresh'])
+            data['lifetime'] = int(
+                refresh.access_token.lifetime.total_seconds())
+            return data
         else:
             raise InvalidTokenError(
                 'No valid token found in cookie  \'refresh_token\'')
