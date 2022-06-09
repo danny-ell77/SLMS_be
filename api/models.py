@@ -1,11 +1,14 @@
+from time import time
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from api.managers import UserManager
+from datetime import datetime
+from django.utils import timezone
 
 
 class TimestampedModel(models.Model):
-    created_date = models.DateTimeField(auto_now_add=True)
-    modified_date = models.DateTimeField(auto_now=True)
+    created_date = models.DateTimeField(default=timezone.now())
+    modified_date = models.DateTimeField(default=timezone.now())
 
     class Meta:
         abstract = True
@@ -56,7 +59,7 @@ class User(AbstractUser, TimestampedModel):
         return self.email
 
 
-class Student(models.Model):
+class Student(TimestampedModel, models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     classroom = models.ForeignKey(
         ClassRoom, on_delete=models.CASCADE, related_name='student')
@@ -65,14 +68,14 @@ class Student(models.Model):
         return self.user._get_fullname
 
 
-class Instructor(models.Model):
+class Instructor(TimestampedModel, models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
 
     def __str__(self):
         return self.user._get_fullname
 
 
-class Assignment(models.Model):
+class Assignment(TimestampedModel, models.Model):
     title = models.CharField(max_length=300)
     course = models.CharField(max_length=50)
     course_code = models.CharField(max_length=10)
@@ -109,3 +112,13 @@ class Submission(TimestampedModel, models.Model):
 
     def __str__(self):
         return self.title
+
+
+class CourseMaterial(TimestampedModel, models.Model):
+    name = models.CharField(max_length=50)
+    description = models.CharField(max_length=120)
+    course = models.CharField(max_length=120)
+    file_link = models.URLField(max_length=300, unique=True)
+
+    def __str__(self):
+        return self.name

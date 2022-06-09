@@ -1,19 +1,38 @@
 from dataclasses import field
+from os import access
 from jwt import InvalidTokenError
 from .models import Assignment, ClassRoom, Instructor, Student, Submission, User
 from rest_framework import serializers
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import update_last_login
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
+from rest_framework_simplejwt.tokens import RefreshToken
 
 
 class CookieTokenRefreshSerializer(TokenRefreshSerializer):
     refresh = None
 
+    # def soms_validate(self, attrs):
+    #     # data = super().validate(attrs)
+    #     attrs['refresh'] = self.context['request'].COOKIES.get('refresh_token')
+    #     if attrs['refresh']:
+    #         refresh = RefreshToken(attrs['refresh'])
+    #         attrs['lifetime'] = int(
+    #             refresh.access_token.lifetime.total_seconds())
+    #         return attrs
+    #     else:
+    #         raise InvalidTokenError(
+    #             'No valid token found in cookie  \'refresh_token\'')
+
     def validate(self, attrs):
         attrs['refresh'] = self.context['request'].COOKIES.get('refresh_token')
+        refresh = RefreshToken(attrs['refresh'])
+        attrs['lifetime'] = int(
+            refresh.access_token.lifetime.total_seconds())
+        attrs['access'] = str(refresh.access_token)
+
         if attrs['refresh']:
-            return super().validate(attrs)
+            return attrs
         else:
             raise InvalidTokenError(
                 'No valid token found in cookie  \'refresh_token\'')
@@ -76,7 +95,7 @@ class StudentSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(read_only=True)
     classroom = ClassRoomSerializer()
     # submissions = serializers.StringRelatedField(many=True)
-    submissions = SubmissionSerializer(read_only=True, many=True)
+    submissions = serializers.StringRelatedField(read_only=True, many=True)
 
     class Meta:
         model = Student
