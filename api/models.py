@@ -41,7 +41,6 @@ class User(AbstractUser, TimestampedModel):
     is_active = models.BooleanField(default=True)
     is_deleted = models.BooleanField(default=False)
 
-    @property
     def _get_fullname(self):
         fullname = f"{self.firstname} {self.lastname}"
         return fullname
@@ -63,16 +62,16 @@ class Student(TimestampedModel, models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     classroom = models.ForeignKey(
         ClassRoom, on_delete=models.CASCADE, related_name='student')
-    
+
     def __str__(self):
-        return self.user._get_fullname
+        return self.user.fullname
 
 
 class Instructor(TimestampedModel, models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
 
     def __str__(self):
-        return self.user._get_fullname
+        return self.user.fullname
 
 
 class Assignment(TimestampedModel, models.Model):
