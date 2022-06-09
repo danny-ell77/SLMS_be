@@ -17,7 +17,7 @@ class ClassRoom(TimestampedModel):
                             max_length=20, unique=True, blank=False)
 
     class Meta:
-        verbose_name_plural = "User Classes"
+        verbose_name_plural = "User Classrooms"
 
     def __str__(self) -> str:
         return self.name
@@ -38,6 +38,7 @@ class User(AbstractUser, TimestampedModel):
     is_active = models.BooleanField(default=True)
     is_deleted = models.BooleanField(default=False)
 
+    @property
     def _get_fullname(self):
         fullname = f"{self.firstname} {self.lastname}"
         return fullname
@@ -59,10 +60,16 @@ class Student(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     classroom = models.ForeignKey(
         ClassRoom, on_delete=models.CASCADE, related_name='student')
+    
+    def __str__(self):
+        return self.user._get_fullname
 
 
 class Instructor(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.user._get_fullname
 
 
 class Assignment(models.Model):

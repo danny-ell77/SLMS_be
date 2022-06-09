@@ -1,13 +1,11 @@
 from pprint import pprint
 from urllib import response
 
-from django.conf import settings
 from django.http import Http404
 from rest_framework import authentication, permissions, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import (TokenObtainPairView,
                                             TokenRefreshView)
 
@@ -15,23 +13,7 @@ from .models import Assignment, ClassRoom, Instructor, Student, Submission, User
 from .serializers import (AssignmentSerializer, CookieTokenRefreshSerializer,
                           SubmissionSerializer, UserListSerializer,
                           UserLoginSerializer, UserRegistrationSerializer)
-
-cookie_details = dict(
-    key=settings.SIMPLE_JWT['AUTH_COOKIE'],
-    expires=settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'],
-    secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
-    httponly=settings.SIMPLE_JWT['AUTH_COOKIE_HTTP_ONLY'],
-    samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE']
-)
-print(cookie_details)
-
-
-def get_tokens_for_user(user):
-    refresh = RefreshToken.for_user(user)
-    return dict(
-        refresh=str(refresh),
-        access=str(refresh.access_token)
-    )
+from .utils import cookie_details, get_tokens_for_user
 
 
 class CookieTokenRefreshView(TokenRefreshView):
@@ -246,21 +228,20 @@ class SubmissionsDetailView(APIView):
         user = User.objects.get(pk=auth_user.pk)
         submission = self.get_object(id)
         serializer = self.serializer_class(submission, data=request.data)
-        if serializer.is_valid(raise_exception=True):
-            if user.is_instructor:
-                serializer.save()
-                response_data = {
-                    'success': True,
-                    'message': 'Submission marked successfully',
-                    'data': serializer.data
-                }
-                return Response(response_data, status=status.HTTP_200_OK)
+        if serializer.is_valid(raise_exception=True) and user.is_instructor:
+            serializer.save()
             response_data = {
-                'success': False,
-                'message': 'Only Instructors can mark assignments',
-                'data': serializer.errors
+                'success': True,
+                'message': 'Submission marked successfully',
+                'data': serializer.data
             }
-            return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
+            return Response(response_data, status=status.HTTP_200_OK)
+        response_data = {
+            'success': False,
+            'message': 'Only Instructors can mark assignments',
+            'data': serializer.errors
+        }
+        return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request):
         submission = self.get_object(id)

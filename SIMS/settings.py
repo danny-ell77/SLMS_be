@@ -24,6 +24,7 @@ BASE_DIR = Path(__file__).resolve(strict=True).parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = '%w5fwvuwc=*d3m+k@8wh*jd1h-&(3!i3_-diy$38b7(@h78g*g'
+# SECRET_KEY = os.getenv("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -51,15 +52,6 @@ INSTALLED_APPS = [
 # App the REST framework url conf
 ROOT_URLCONF = 'SIMS.urls'
 
-# REST framework settings
-REST_FRAMEWORK = {
-    'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated',
-    ),
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ),
-}
 
 # Configure the JWT settings
 SIMPLE_JWT = {
@@ -122,6 +114,7 @@ CORS_ORIGIN_ALLOW_ALL = False
 CORS_ORIGIN_WHITELIST = (
     'http://localhost:3000',
     'http://sims-academic.herokuapp.com',
+    'https://uniben-lms.vercel.app'
 )
 
 # REST framework settings
@@ -132,10 +125,9 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTTokenUserAuthentication',
         'rest_framework.authentication.SessionAuthentication',
-        'rest_framework.authentication.BasicAuthentication'
+        'rest_framework.authentication.BasicAuthentication',
     ),
 }
-
 
 TEMPLATES = [
     {
