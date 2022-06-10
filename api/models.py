@@ -7,8 +7,8 @@ from django.utils import timezone
 
 
 class TimestampedModel(models.Model):
-    created_date = models.DateTimeField(default=timezone.now())
-    modified_date = models.DateTimeField(default=timezone.now())
+    created_date = models.DateTimeField(default=timezone.now)
+    modified_date = models.DateTimeField(default=timezone.now)
 
     class Meta:
         abstract = True
