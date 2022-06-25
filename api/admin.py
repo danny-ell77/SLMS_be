@@ -5,7 +5,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.utils.translation import ugettext_lazy as _
 
-from .models import Instructor, Student, User
+from .models import CourseMaterial, Instructor, Student, User
 
 
 @admin.register(User)
@@ -38,3 +38,4 @@ admin.site.register(Instructor)
 admin.site.register(ClassRoom)
 admin.site.register(Assignment)
 admin.site.register(Submission)
+admin.site.register(CourseMaterial)

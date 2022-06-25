@@ -6,7 +6,8 @@ from api.views import (
     SubmissionListView,
     SubmissionsDetailView,
     AssignmentsDetailView,
-    AssignmentsListView
+    AssignmentsListView,
+    CourseMaterialsListView,
 )
 
 urlpatterns = [
@@ -18,4 +19,6 @@ urlpatterns = [
     path('assignments/', AssignmentsListView.as_view()),
     path('submission/<int:id>/', SubmissionsDetailView.as_view()),
     path('submissions/', SubmissionListView.as_view()),
+
+    path('course-materials', CourseMaterialsListView.as_view())
 ]

@@ -1,7 +1,8 @@
 from dataclasses import field
 from os import access
+from pickletools import read_long1
 from jwt import InvalidTokenError
-from .models import Assignment, ClassRoom, Instructor, Student, Submission, User
+from .models import Assignment, ClassRoom, CourseMaterial, Instructor, Student, Submission, User
 from rest_framework import serializers
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import update_last_login
@@ -11,18 +12,6 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 class CookieTokenRefreshSerializer(TokenRefreshSerializer):
     refresh = None
-
-    # def soms_validate(self, attrs):
-    #     # data = super().validate(attrs)
-    #     attrs['refresh'] = self.context['request'].COOKIES.get('refresh_token')
-    #     if attrs['refresh']:
-    #         refresh = RefreshToken(attrs['refresh'])
-    #         attrs['lifetime'] = int(
-    #             refresh.access_token.lifetime.total_seconds())
-    #         return attrs
-    #     else:
-    #         raise InvalidTokenError(
-    #             'No valid token found in cookie  \'refresh_token\'')
 
     def validate(self, attrs):
         attrs['refresh'] = self.context['request'].COOKIES.get('refresh_token')
@@ -127,7 +116,7 @@ class UserRegistrationSerializer(serializers.Serializer):
         print(f"validated_data ==> {validated_data}")
         classroom = validated_data.pop('classroom')
         print(validated_data)
-        user = User.objects.filter(email=validated_data['email']).first()
+        user = User.objects.get(email=validated_data['email'])
         if not user:
             user = User.objects.create_user(**validated_data)
             if validated_data.get('is_student') == True:
@@ -186,3 +175,18 @@ class UserListSerializer(serializers.ModelSerializer):
             'email',
             'role'
         )
+
+
+class CourseMaterialSerializer(serializers.ModelSerializer):
+    uploaded_by = serializers.StringRelatedField(many=False, read_only=True)
+
+    def create(self, validated_data):
+        auth_user = self.context["request"].user
+        user = User.objects.get(pk=auth_user.pk)
+        # print(dir(self.context))
+        cm = CourseMaterial.objects.create(uploaded_by=user, **validated_data)
+        return cm
+
+    class Meta:
+        model = CourseMaterial
+        fields = "__all__"

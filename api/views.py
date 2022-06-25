@@ -2,17 +2,19 @@ from pprint import pprint
 from urllib import response
 
 from django.http import Http404
-from rest_framework import authentication, permissions, status
+from rest_framework import parsers, permissions, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import (TokenObtainPairView,
                                             TokenRefreshView)
 
-from .models import Assignment, ClassRoom, Instructor, Student, Submission, User
+from .models import (Assignment, ClassRoom, CourseMaterial, Instructor,
+                     Student, Submission, User)
 from .serializers import (AssignmentSerializer, CookieTokenRefreshSerializer,
-                          SubmissionSerializer, UserListSerializer,
-                          UserLoginSerializer, UserRegistrationSerializer)
+                          CourseMaterialSerializer, SubmissionSerializer,
+                          UserListSerializer, UserLoginSerializer,
+                          UserRegistrationSerializer)
 from .utils import cookie_details, get_tokens_for_user
 
 
@@ -89,11 +91,7 @@ class AssignmentsListView(APIView):
         auth_user = request.user
         # pprint(dir(user))
         user = User.objects.get(pk=auth_user.pk)
-        if user.is_instructor:
-            assignments = Assignment.objects.filter(instructor=user.instructor)
-        else:
-            classroom_id = user.student.classroom.id
-            assignments = Assignment.objects.filter(classroom=classroom_id)
+        assignments = Assignment.objects.get_assignments(user=user)
         serializer = self.serializer_class(assignments, many=True)
         response_data = {
             'success': True,
@@ -177,10 +175,7 @@ class SubmissionListView(APIView):
     def get(self, request):
         auth_user = request.user
         user = User.objects.get(pk=auth_user.pk)
-        if user.is_instructor:
-            submissions = Submission.objects.filter(instructor=user.instructor)
-        else:
-            submissions = Submission.objects.filter(student=user.student)
+        submissions = Submission.objects.get_submissions(user=user)
         serializer = self.serializer_class(submissions, many=True)
         response_data = {
             'success': True,
@@ -252,3 +247,34 @@ class SubmissionsDetailView(APIView):
             'message': 'Submission deleted successfully',
         }
         return Response(response_data, status=status.HTTP_204_NO_CONTENT)
+
+
+class CourseMaterialsListView(APIView):
+    parser_classes = [parsers.MultiPartParser, parsers.FormParser]
+    serializer_class = CourseMaterialSerializer
+
+    def get(self, request):
+        auth_user = request.user
+        user = User.objects.get(pk=auth_user.pk)
+        course_materials = CourseMaterial.objects.get_course_materials(
+            user=user)
+        serializer = self.serializer_class(course_materials, many=True)
+        response_data = {
+            'success': True,
+            'message': 'Course Materials fetched successfully',
+            'data': serializer.data
+        }
+        return Response(response_data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        serializer = self.serializer_class(
+            data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            response_data = {
+                'success': True,
+                'message': 'Course material uploaded successfully',
+                'data': serializer.data
+            }
+            return Response(response_data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

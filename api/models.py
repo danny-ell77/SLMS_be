@@ -1,8 +1,7 @@
 from time import time
 from django.db import models
 from django.contrib.auth.models import AbstractUser
-from api.managers import UserManager
-from datetime import datetime
+from api.managers import CourseMaterialManager, SubmissionsManager, UserManager
 from django.utils import timezone
 
 
@@ -55,7 +54,7 @@ class User(AbstractUser, TimestampedModel):
     objects = UserManager()
 
     def __str__(self):
-        return self.email
+        return self.fullname
 
 
 class Student(TimestampedModel, models.Model):
@@ -82,7 +81,7 @@ class Assignment(TimestampedModel, models.Model):
         Instructor, on_delete=models.CASCADE, related_name='assignments')
     classroom = models.ForeignKey(
         ClassRoom, on_delete=models.CASCADE, related_name='assignments')
-    # duration = models.DateTimeField(blank=True)
+    # duration = models.DurationField(blank=True)
     status = models.CharField(max_length=15)
     marks = models.IntegerField()
 
@@ -109,6 +108,8 @@ class Submission(TimestampedModel, models.Model):
     is_draft = models.BooleanField(default=False)
     is_submitted = models.BooleanField(default=False)
 
+    objects = SubmissionsManager()
+
     def __str__(self):
         return self.title
 
@@ -117,7 +118,12 @@ class CourseMaterial(TimestampedModel, models.Model):
     name = models.CharField(max_length=50)
     description = models.CharField(max_length=120)
     course = models.CharField(max_length=120)
-    file_link = models.URLField(max_length=300, unique=True)
+    document = models.FileField(null=True, blank=True)
+    uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
+    classroom = models.ForeignKey(
+        ClassRoom, on_delete=models.CASCADE, related_name='course_materials', null=True)
+
+    objects = CourseMaterialManager()
 
     def __str__(self):
         return self.name
