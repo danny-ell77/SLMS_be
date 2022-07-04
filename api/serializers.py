@@ -149,11 +149,12 @@ class UserLoginSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 "Email or password is incorrect!")
 
-        student = Student.objects.get(user=user) if user.is_student else None
-        instructor = Instructor.objects.get(
-            user=user) if user.is_instructor else None
-
         try:
+            student = Student.objects.get(
+                user=user) if user.is_student else None
+            instructor = Instructor.objects.get(
+                user=user) if user.is_instructor else None
+
             update_last_login(None, user)
             attrs.update(
                 pk=user.pk,
@@ -164,7 +165,7 @@ class UserLoginSerializer(serializers.Serializer):
                 instructor=instructor
             )
             return attrs
-        except User.DoesNotExist:
+        except:
             raise serializers.ValidationError("Email or password incorrect")
 
 

@@ -9,7 +9,6 @@ cookie_details = dict(
     httponly=settings.SIMPLE_JWT['AUTH_COOKIE_HTTP_ONLY'],
     samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE']
 )
-print(cookie_details)
 
 
 def get_tokens_for_user(user):
