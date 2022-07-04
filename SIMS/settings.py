@@ -23,8 +23,8 @@ BASE_DIR = Path(__file__).resolve(strict=True).parent.parent
 # See https://docs.djangoproject.com/en/3.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = '%w5fwvuwc=*d3m+k@8wh*jd1h-&(3!i3_-diy$38b7(@h78g*g'
-# SECRET_KEY = os.getenv("SECRET_KEY")
+# SECRET_KEY = '%w5fwvuwc=*d3m+k@8wh*jd1h-&(3!i3_-diy$38b7(@h78g*g'
+SECRET_KEY = os.getenv("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -197,11 +197,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-AWS_ACCESS_KEY_ID = "AKIAVQE3667DVIHVPSFO"
-AWS_SECRET_ACCESS_KEY = "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"
-AWS_STORAGE_BUCKET_NAME = "uniben-lms"
-AWS_S3_SIGNATURE_VERSION = 's3v4'
-AWS_S3_REGION_NAME = "us-east-1"
+
 AWS_S3_FILE_OVERWRITE = False
 AWS_DEFAULT_ACL = None
 AWS_S3_VERIFY = True

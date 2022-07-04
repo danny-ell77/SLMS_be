@@ -116,7 +116,7 @@ class UserRegistrationSerializer(serializers.Serializer):
         print(f"validated_data ==> {validated_data}")
         classroom = validated_data.pop('classroom')
         print(validated_data)
-        user = User.objects.get(email=validated_data['email'])
+        user = User.objects.filter(email=validated_data['email']).exists()
         if not user:
             user = User.objects.create_user(**validated_data)
             if validated_data.get('is_student') == True:
