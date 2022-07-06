@@ -1,7 +1,7 @@
 from time import time
 from django.db import models
 from django.contrib.auth.models import AbstractUser
-from api.managers import CourseMaterialManager, SubmissionsManager, UserManager
+from api.managers import AssignmentsManager, CourseMaterialManager, SubmissionsManager, UserManager
 from django.utils import timezone
 
 
@@ -74,19 +74,27 @@ class Instructor(TimestampedModel, models.Model):
 
 
 class Assignment(TimestampedModel, models.Model):
-    title = models.CharField(max_length=300)
+    title = models.CharField(max_length=300, unique=True)
+    code = models.CharField(max_length=15, null=True, blank=True)
     course = models.CharField(max_length=50)
     course_code = models.CharField(max_length=10)
     instructor = models.ForeignKey(
         Instructor, on_delete=models.CASCADE, related_name='assignments')
     classroom = models.ForeignKey(
         ClassRoom, on_delete=models.CASCADE, related_name='assignments')
-    # duration = models.DurationField(blank=True)
+    due = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=15)
     marks = models.IntegerField()
 
+    objects = AssignmentsManager()
+
     def __str__(self):
         return self.title
+
+# class Questions(TimestampedModel, models.Model):
+#     title = models.CharField(max_length=300, unique=True)
+#     assignment = models.ForeignKey(
+#         Assignment, on_delete=models.CASCADE, related_name='questions')
 
 
 class Submission(TimestampedModel, models.Model):
@@ -96,8 +104,6 @@ class Submission(TimestampedModel, models.Model):
     score = models.FloatField(default=0.0)
     assignment = models.ForeignKey(
         Assignment, on_delete=models.CASCADE, related_name='submissions')
-    # author = models.ForeignKey(
-    #     User, on_delete=models.CASCADE, related_name='submissions')
     student = models.ForeignKey(
         Student, on_delete=models.CASCADE, related_name='submissions')
     instructor = models.ForeignKey(

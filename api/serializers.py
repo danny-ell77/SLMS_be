@@ -28,19 +28,23 @@ class CookieTokenRefreshSerializer(TokenRefreshSerializer):
 
 
 class SubmissionSerializer(serializers.ModelSerializer):
-    assignment = serializers.PrimaryKeyRelatedField(
-        queryset=Assignment.objects.all(), many=False)
-    student = serializers.PrimaryKeyRelatedField(
-        queryset=Student.objects.all(),  many=False)
-    instructor = serializers.PrimaryKeyRelatedField(
-        queryset=Instructor.objects.all(), many=False)
-    classroom = serializers.PrimaryKeyRelatedField(
+    student_name = serializers.StringRelatedField(
+        source="student", read_only=True, many=False)
+    instructor_name = serializers.StringRelatedField(
+        source="instructor", read_only=True, many=False)
+    classroom = serializers.SlugRelatedField(
+        slug_field='name',
         queryset=ClassRoom.objects.all(), many=False)
 
     class Meta:
         model = Submission
-        fields = ('id', 'assignment', 'student', 'instructor', 'classroom', 'content',
+        fields = ('id', 'student_name', 'instructor_name', 'assignment', 'student', 'instructor', 'classroom', 'content',
                   'title', 'status', 'score', 'is_draft', 'is_submitted')
+        extra_kwargs = {
+            'instructor': {'write_only': True},
+            'student': {'write_only': True},
+            'is_submitted': {'read_only': True},
+        }
 
     def create(self, validated_data):
         submission = Submission.objects.filter(
@@ -52,15 +56,17 @@ class SubmissionSerializer(serializers.ModelSerializer):
 
 
 class AssignmentSerializer(serializers.ModelSerializer):
-    instructor = serializers.PrimaryKeyRelatedField(
-        queryset=Instructor.objects.all(), many=False)
-    classroom = serializers.PrimaryKeyRelatedField(
+    instructor_name = serializers.StringRelatedField(
+        source="instructor", read_only=True, many=False)
+    classroom = serializers.SlugRelatedField(
+        slug_field='name',
         queryset=ClassRoom.objects.all(), many=False)
 
     class Meta:
         model = Assignment
         fields = ('id', 'title', 'course', 'course_code', 'instructor',
-                  'classroom', 'status', 'marks')
+                  'classroom', 'status', 'marks', 'instructor_name')
+        extra_kwargs = {'instructor': {'write_only': True}}
 
     def create(self, validated_data):
         assignment = Assignment.objects.filter(
