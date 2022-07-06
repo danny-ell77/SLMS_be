@@ -63,7 +63,7 @@ class Student(TimestampedModel, models.Model):
         ClassRoom, on_delete=models.CASCADE, related_name='student')
 
     def __str__(self):
-        return self.user.fullname
+        return f"{self.user.fullname} from {self.classroom.name}"
 
 
 class Instructor(TimestampedModel, models.Model):
