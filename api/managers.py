@@ -48,13 +48,11 @@ class SubmissionsManager(models.Manager):
     def get_submissions(self, user):
         if user.is_instructor:
             return self.filter(instructor=user.instructor)
-        else:
-            return self.filter(student=user.student)
+        return self.filter(student=user.student)
 
 
 class AssignmentsManager(models.Manager):
     def get_assignments(self, user):
         if user.is_instructor:
             return self.filter(instructor=user.instructor)
-        else:
-            return self.filter(classroom=user.student.classroom)
+        return self.filter(classroom=user.student.classroom)

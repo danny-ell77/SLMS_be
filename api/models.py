@@ -74,10 +74,9 @@ class Instructor(TimestampedModel, models.Model):
 
 
 class Assignment(TimestampedModel, models.Model):
-    title = models.CharField(max_length=300, unique=True)
+    question = models.CharField(max_length=300, unique=True)
     code = models.CharField(max_length=15, null=True, blank=True)
     course = models.CharField(max_length=50)
-    course_code = models.CharField(max_length=10)
     instructor = models.ForeignKey(
         Instructor, on_delete=models.CASCADE, related_name='assignments')
     classroom = models.ForeignKey(
@@ -91,6 +90,8 @@ class Assignment(TimestampedModel, models.Model):
     def __str__(self):
         return self.title
 
+# class Courses(models.Model):
+#     pass
 # class Questions(TimestampedModel, models.Model):
 #     title = models.CharField(max_length=300, unique=True)
 #     assignment = models.ForeignKey(

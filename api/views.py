@@ -9,6 +9,8 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.views import (TokenObtainPairView,
                                             TokenRefreshView)
 
+from api.permissions import IsInstructorOrReadOnly
+
 from .models import (Assignment, ClassRoom, CourseMaterial, Instructor,
                      Student, Submission, User)
 from .serializers import (AssignmentSerializer, CookieTokenRefreshSerializer,
@@ -86,6 +88,7 @@ class AssignmentsListView(APIView):
     Only Instructors can create assignments
     '''
     serializer_class = AssignmentSerializer
+    permission_classes = IsInstructorOrReadOnly
 
     def get(self, request):
         auth_user = request.user
@@ -119,6 +122,7 @@ class AssignmentsDetailView(APIView):
     """
 
     serializer_class = AssignmentSerializer
+    permission_classes = IsInstructorOrReadOnly
 
     def get_object(self, id):
         try:

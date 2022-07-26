@@ -64,7 +64,7 @@ class AssignmentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Assignment
-        fields = ('id', 'title', 'course', 'course_code', 'instructor',
+        fields = ('id', 'question', 'course', 'code', 'instructor',
                   'classroom', 'status', 'marks', 'instructor_name')
         extra_kwargs = {'instructor': {'write_only': True}}
 
