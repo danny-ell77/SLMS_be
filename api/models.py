@@ -88,7 +88,7 @@ class Assignment(TimestampedModel, models.Model):
     objects = AssignmentsManager()
 
     def __str__(self):
-        return self.title
+        return self.question
 
 # class Courses(models.Model):
 #     pass
