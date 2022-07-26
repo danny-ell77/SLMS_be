@@ -65,7 +65,7 @@ class AssignmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Assignment
         fields = ('id', 'question', 'course', 'code', 'instructor',
-                  'classroom', 'status', 'marks', 'instructor_name')
+                  'classroom', 'status', 'marks', 'due', 'instructor_name')
         extra_kwargs = {'instructor': {'write_only': True}}
 
     def create(self, validated_data):
