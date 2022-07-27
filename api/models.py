@@ -4,6 +4,12 @@ from django.contrib.auth.models import AbstractUser
 from api.managers import AssignmentsManager, CourseMaterialManager, SubmissionsManager, UserManager
 from django.utils import timezone
 
+STATUS = (
+    ("PENDING", "pending"),
+    ("COMPLETED", "completed"),
+    ("CANCELLED", "cancelled"),
+)
+
 
 class TimestampedModel(models.Model):
     created_date = models.DateTimeField(default=timezone.now)
@@ -82,7 +88,7 @@ class Assignment(TimestampedModel, models.Model):
     classroom = models.ForeignKey(
         ClassRoom, on_delete=models.CASCADE, related_name='assignments')
     due = models.DateTimeField(null=True, blank=True)
-    status = models.CharField(max_length=15)
+    status = models.CharField(max_length=15, default="pending", choices=STATUS)
     marks = models.IntegerField()
 
     objects = AssignmentsManager()

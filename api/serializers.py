@@ -52,6 +52,9 @@ class SubmissionSerializer(serializers.ModelSerializer):
         if submission:
             raise serializers.ValidationError(
                 'This submission already exists!, consider changing the Title or content')
+        auth_user = self.context["request"].user
+        validated_data["student"] = Student.objects.get(
+            user=auth_user.pk)
         return super().create(validated_data)
 
 
@@ -66,14 +69,17 @@ class AssignmentSerializer(serializers.ModelSerializer):
         model = Assignment
         fields = ('id', 'question', 'course', 'code', 'instructor',
                   'classroom', 'status', 'marks', 'due', 'instructor_name')
-        extra_kwargs = {'instructor': {'write_only': True}}
+        # extra_kwargs = {'instructor': {'write_only': True}}
 
     def create(self, validated_data):
         assignment = Assignment.objects.filter(
-            title=validated_data.get('title')).first()
+            question=validated_data.get('question')).first()
         if assignment:
             raise serializers.ValidationError(
                 'This assignment already exists!')
+        auth_user = self.context["request"].user
+        validated_data["instructor"] = Instructor.objects.get(
+            user=auth_user.pk)
         return super().create(validated_data)
 
 

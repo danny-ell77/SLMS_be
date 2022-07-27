@@ -15,10 +15,10 @@ urlpatterns = [
     path('register', UserRegistrationView.as_view(), name='register'),
     path('login', UserLoginView.as_view(), name='login'),
 
-    path('assignment/<int:id>/', AssignmentsDetailView.as_view()),
-    path('assignments/', AssignmentsListView.as_view()),
-    path('submission/<int:id>/', SubmissionsDetailView.as_view()),
-    path('submissions/', SubmissionListView.as_view()),
+    path('assignment/<int:id>', AssignmentsDetailView.as_view()),
+    path('assignments', AssignmentsListView.as_view()),
+    path('submission/<int:id>', SubmissionsDetailView.as_view()),
+    path('submissions', SubmissionListView.as_view()),
 
     path('course-materials', CourseMaterialsListView.as_view())
 ]

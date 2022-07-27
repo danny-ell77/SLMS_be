@@ -9,7 +9,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.views import (TokenObtainPairView,
                                             TokenRefreshView)
 
-from api.permissions import IsInstructorOrReadOnly
+from api.permissions import IsInstructorOrReadOnly, IsStudentOrReadOnly
 
 from .models import (Assignment, ClassRoom, CourseMaterial, Instructor,
                      Student, Submission, User)
@@ -88,7 +88,7 @@ class AssignmentsListView(APIView):
     Only Instructors can create assignments
     '''
     serializer_class = AssignmentSerializer
-    permission_classes = IsInstructorOrReadOnly
+    permission_classes = (IsInstructorOrReadOnly, )
 
     def get(self, request):
         auth_user = request.user
@@ -104,7 +104,8 @@ class AssignmentsListView(APIView):
         return Response(response_data, status=status.HTTP_200_OK)
 
     def post(self, request):
-        serializer = self.serializer_class(data=request.data)
+        serializer = self.serializer_class(
+            data=request.data, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             response_data = {
@@ -122,7 +123,7 @@ class AssignmentsDetailView(APIView):
     """
 
     serializer_class = AssignmentSerializer
-    permission_classes = IsInstructorOrReadOnly
+    permission_classes = (IsInstructorOrReadOnly, )
 
     def get_object(self, id):
         try:
@@ -175,6 +176,7 @@ class SubmissionListView(APIView):
     Only Students can create assignments
     '''
     serializer_class = SubmissionSerializer
+    permission_classes = (IsStudentOrReadOnly, )
 
     def get(self, request):
         auth_user = request.user
@@ -207,6 +209,7 @@ class SubmissionsDetailView(APIView):
     """
 
     serializer_class = SubmissionSerializer
+    permission_classes = (IsStudentOrReadOnly, )
 
     def get_object(self, id):
         try:

@@ -5,7 +5,8 @@ from .models import User
 class IsInstructorOrReadOnly(BasePermission):
     edit_methods = ("PUT", "PATCH", "POST")
 
-    def has_object_permission(self, request, view, obj):
+    def has_permission(self, request, view):
+        print("executed--")
         user = User.objects.get(pk=request.user.pk)
         if request.user.is_superuser:
             return True
@@ -16,7 +17,7 @@ class IsInstructorOrReadOnly(BasePermission):
         # if obj.instructor is user.instructor:
         #     return True
 
-        if user.instructor and request.method in self.edit_methods:
+        if user.is_instructor and request.method in self.edit_methods:
             return True
         return False
 
@@ -24,7 +25,7 @@ class IsInstructorOrReadOnly(BasePermission):
 class IsStudentOrReadOnly(BasePermission):
     edit_methods = ("PUT", "PATCH", "POST")
 
-    def has_object_permission(self, request, view, obj):
+    def has_permission(self, request, view):
         user = User.objects.get(pk=request.user.pk)
         if request.user.is_superuser:
             return True
@@ -35,6 +36,6 @@ class IsStudentOrReadOnly(BasePermission):
         # if obj.instructor is user.instructor:
         #     return True
 
-        if user.student and request.method in self.edit_methods:
+        if user.is_student and request.method in self.edit_methods:
             return True
         return False

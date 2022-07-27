@@ -1,0 +1,7 @@
+This is to note that the endpoint to create
+assignment performs two queries 
+to the db instead of one.
+1. To query the db for the profile of the user making the request
+2. To save the assignmnet to the db
+This might not be great performance wise if the app scales 
+This might be great for secuirity since 
