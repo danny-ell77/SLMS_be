@@ -38,7 +38,7 @@ class SubmissionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Submission
-        fields = ('id', 'student_name', 'instructor_name', 'assignment', 'student', 'instructor', 'classroom', 'content',
+        fields = ('id', 'student_name', 'instructor_name', 'assignment', 'instructor', 'classroom', 'content',
                   'title', 'status', 'score', 'is_draft', 'is_submitted')
         extra_kwargs = {
             'instructor': {'write_only': True},
@@ -53,8 +53,7 @@ class SubmissionSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 'This submission already exists!, consider changing the Title or content')
         auth_user = self.context["request"].user
-        validated_data["student"] = Student.objects.get(
-            user=auth_user.pk)
+        validated_data["student"] = auth_user.student
         return super().create(validated_data)
 
 
@@ -67,7 +66,7 @@ class AssignmentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Assignment
-        fields = ('id', 'question', 'course', 'code', 'instructor',
+        fields = ('id', 'question', 'course', 'code',
                   'classroom', 'status', 'marks', 'due', 'instructor_name')
         # extra_kwargs = {'instructor': {'write_only': True}}
 
@@ -78,8 +77,7 @@ class AssignmentSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 'This assignment already exists!')
         auth_user = self.context["request"].user
-        validated_data["instructor"] = Instructor.objects.get(
-            user=auth_user.pk)
+        validated_data["instructor"] = auth_user.instructor
         return super().create(validated_data)
 
 
@@ -195,9 +193,9 @@ class CourseMaterialSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         auth_user = self.context["request"].user
-        user = User.objects.get(pk=auth_user.pk)
         # print(dir(self.context))
-        cm = CourseMaterial.objects.create(uploaded_by=user, **validated_data)
+        cm = CourseMaterial.objects.create(
+            uploaded_by=auth_user, **validated_data)
         return cm
 
     class Meta:

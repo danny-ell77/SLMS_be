@@ -91,10 +91,7 @@ class AssignmentsListView(APIView):
     permission_classes = (IsInstructorOrReadOnly, )
 
     def get(self, request):
-        auth_user = request.user
-        # pprint(dir(user))
-        user = User.objects.get(pk=auth_user.pk)
-        assignments = Assignment.objects.get_assignments(user=user)
+        assignments = Assignment.objects.get_assignments(user=request.user)
         serializer = self.serializer_class(assignments, many=True)
         response_data = {
             'success': True,
@@ -142,8 +139,7 @@ class AssignmentsDetailView(APIView):
         return Response(response_data)
 
     def patch(self, request, id):
-        user = User.objects.get(pk=request.user.pk)
-        if user.is_instructor:
+        if request.user.is_instructor:
             assignment = self.get_object(id)
             serializer = self.serializer_class(assignment, data=request.data)
             if serializer.is_valid():
@@ -179,9 +175,7 @@ class SubmissionListView(APIView):
     permission_classes = (IsStudentOrReadOnly, )
 
     def get(self, request):
-        auth_user = request.user
-        user = User.objects.get(pk=auth_user.pk)
-        submissions = Submission.objects.get_submissions(user=user)
+        submissions = Submission.objects.get_submissions(user=request.user)
         serializer = self.serializer_class(submissions, many=True)
         response_data = {
             'success': True,
@@ -191,7 +185,8 @@ class SubmissionListView(APIView):
         return Response(response_data, status=status.HTTP_200_OK)
 
     def post(self, request):
-        serializer = self.serializer_class(data=request.data)
+        serializer = self.serializer_class(
+            data=request.data, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             response_data = {
@@ -226,11 +221,9 @@ class SubmissionsDetailView(APIView):
         '''
         Students are only capable of 
         '''
-        auth_user = request.user
-        user = User.objects.get(pk=auth_user.pk)
         submission = self.get_object(id)
         serializer = self.serializer_class(submission, data=request.data)
-        if serializer.is_valid(raise_exception=True) and user.is_instructor:
+        if serializer.is_valid(raise_exception=True) and request.user.is_instructor:
             serializer.save()
             response_data = {
                 'success': True,
@@ -261,10 +254,8 @@ class CourseMaterialsListView(APIView):
     serializer_class = CourseMaterialSerializer
 
     def get(self, request):
-        auth_user = request.user
-        user = User.objects.get(pk=auth_user.pk)
         course_materials = CourseMaterial.objects.get_course_materials(
-            user=user)
+            user=request.user)
         serializer = self.serializer_class(course_materials, many=True)
         response_data = {
             'success': True,
