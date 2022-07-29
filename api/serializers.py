@@ -42,7 +42,6 @@ class SubmissionSerializer(serializers.ModelSerializer):
                   'title', 'status', 'score', 'is_draft', 'is_submitted')
         extra_kwargs = {
             'instructor': {'write_only': True},
-            'student': {'write_only': True},
             'is_submitted': {'read_only': True},
         }
 

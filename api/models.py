@@ -4,10 +4,15 @@ from django.contrib.auth.models import AbstractUser
 from api.managers import AssignmentsManager, CourseMaterialManager, SubmissionsManager, UserManager
 from django.utils import timezone
 
-STATUS = (
+ASSIGNMENT_CHOICES = (
     ("PENDING", "pending"),
     ("COMPLETED", "completed"),
-    ("CANCELLED", "cancelled"),
+    ("CANCELED", "canceled"),
+)
+
+SUBMISSION_CHOICES = (
+    ("DRAFT", "draft"),
+    ("SUBMITTED", "submitted")
 )
 
 
@@ -88,7 +93,8 @@ class Assignment(TimestampedModel, models.Model):
     classroom = models.ForeignKey(
         ClassRoom, on_delete=models.CASCADE, related_name='assignments')
     due = models.DateTimeField(null=True, blank=True)
-    status = models.CharField(max_length=15, default="pending", choices=STATUS)
+    status = models.CharField(
+        max_length=15, default="PENDING", choices=ASSIGNMENT_CHOICES)
     marks = models.IntegerField()
 
     objects = AssignmentsManager()
@@ -107,7 +113,8 @@ class Assignment(TimestampedModel, models.Model):
 class Submission(TimestampedModel, models.Model):
     content = models.TextField(blank=True)
     title = models.CharField(max_length=255, blank=False)
-    status = models.CharField(max_length=15, blank=True)
+    status = models.CharField(
+        max_length=15, blank=True, choices=SUBMISSION_CHOICES, default="SUBMITTED")
     score = models.FloatField(default=0.0)
     assignment = models.ForeignKey(
         Assignment, on_delete=models.CASCADE, related_name='submissions')
