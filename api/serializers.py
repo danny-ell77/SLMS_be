@@ -66,8 +66,8 @@ class AssignmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Assignment
         fields = ('id', 'question', 'course', 'code',
-                  'classroom', 'status', 'marks', 'due', 'instructor_name')
-        # extra_kwargs = {'instructor': {'write_only': True}}
+                  'classroom', 'status', 'marks', 'due', 'instructor', 'instructor_name')
+        extra_kwargs = {'instructor': {'read_only': True}}
 
     def create(self, validated_data):
         assignment = Assignment.objects.filter(
