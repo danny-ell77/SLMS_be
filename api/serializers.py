@@ -1,6 +1,3 @@
-from dataclasses import field
-from os import access
-from pickletools import read_long1
 from jwt import InvalidTokenError
 from .models import Assignment, ClassRoom, CourseMaterial, Instructor, Student, Submission, User
 from rest_framework import serializers
@@ -8,6 +5,7 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.models import update_last_login
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.db.models import Q
 
 
 class CookieTokenRefreshSerializer(TokenRefreshSerializer):
@@ -25,35 +23,6 @@ class CookieTokenRefreshSerializer(TokenRefreshSerializer):
         else:
             raise InvalidTokenError(
                 'No valid token found in cookie  \'refresh_token\'')
-
-
-class SubmissionSerializer(serializers.ModelSerializer):
-    student_name = serializers.StringRelatedField(
-        source="student", read_only=True, many=False)
-    instructor_name = serializers.StringRelatedField(
-        source="instructor", read_only=True, many=False)
-    classroom = serializers.SlugRelatedField(
-        slug_field='name',
-        queryset=ClassRoom.objects.all(), many=False)
-
-    class Meta:
-        model = Submission
-        fields = ('id', 'student_name', 'instructor_name', 'assignment', 'instructor', 'classroom', 'content',
-                  'title', 'status', 'score', 'is_draft', 'is_submitted')
-        extra_kwargs = {
-            'instructor': {'write_only': True},
-            'is_submitted': {'read_only': True},
-        }
-
-    def create(self, validated_data):
-        submission = Submission.objects.filter(
-            content=validated_data.get('content')).first()
-        if submission:
-            raise serializers.ValidationError(
-                'This submission already exists!, consider changing the Title or content')
-        auth_user = self.context["request"].user
-        validated_data["student"] = auth_user.student
-        return super().create(validated_data)
 
 
 class AssignmentSerializer(serializers.ModelSerializer):
@@ -77,6 +46,40 @@ class AssignmentSerializer(serializers.ModelSerializer):
                 'This assignment already exists!')
         auth_user = self.context["request"].user
         validated_data["instructor"] = auth_user.instructor
+        return super().create(validated_data)
+
+
+class SubmissionSerializer(serializers.ModelSerializer):
+    student_name = serializers.StringRelatedField(
+        source="student", read_only=True, many=False)
+    instructor_name = serializers.StringRelatedField(
+        source="instructor", read_only=True, many=False)
+    classroom = serializers.SlugRelatedField(
+        slug_field='name',
+        queryset=ClassRoom.objects.all(), many=False)
+    # assignment = serializers.SlugRelatedField(
+    #     slug_field='code',
+    #     queryset=Assignment.objects.all(), many=False)
+
+    class Meta:
+        model = Submission
+        fields = ('id', 'student_name', 'instructor_name', 'assignment', 'instructor', 'classroom', 'content',
+                  'title', 'status', 'score', 'is_draft', 'is_submitted')
+        extra_kwargs = {
+            'instructor': {'write_only': True},
+            'is_submitted': {'read_only': True},
+        }
+
+    def create(self, validated_data):
+        submission = Submission.objects.filter(
+            content=validated_data.get('content')).first()
+        # s = Submission.objects.get(
+        #     Q(content__icontains=validated_data.get('content') | Q(title__contains=validated_data.get('title'))))
+        if submission and submission.status == "SUBMITTED":
+            raise serializers.ValidationError(
+                'This submission already exists!, consider changing the Title or content')
+        auth_user = self.context["request"].user
+        validated_data["student"] = auth_user.student
         return super().create(validated_data)
 
 

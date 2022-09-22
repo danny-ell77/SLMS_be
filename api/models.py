@@ -1,3 +1,4 @@
+from asyncio.base_futures import _CANCELLED
 from time import time
 from django.db import models
 from django.contrib.auth.models import AbstractUser
@@ -8,6 +9,7 @@ ASSIGNMENT_CHOICES = (
     ("PENDING", "pending"),
     ("COMPLETED", "completed"),
     ("CANCELED", "canceled"),
+    ("EXPIRED", "expired"),
 )
 
 SUBMISSION_CHOICES = (
@@ -85,6 +87,12 @@ class Instructor(TimestampedModel, models.Model):
 
 
 class Assignment(TimestampedModel, models.Model):
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        COMPLETED = "COMPLETED", "Completed"
+        CANCELLED = "CANCELLED", "Cancelled"
+        EXPIRED = "EXPIRED", "Expired"
+
     question = models.CharField(max_length=300, unique=True)
     code = models.CharField(max_length=15, null=True, blank=True)
     course = models.CharField(max_length=50)
@@ -94,7 +102,7 @@ class Assignment(TimestampedModel, models.Model):
         ClassRoom, on_delete=models.CASCADE, related_name='assignments')
     due = models.DateTimeField(null=True, blank=True)
     status = models.CharField(
-        max_length=15, default="PENDING", choices=ASSIGNMENT_CHOICES)
+        max_length=15, default=Status.PENDING, choices=Status.choices)
     marks = models.IntegerField()
 
     objects = AssignmentsManager()
@@ -111,10 +119,14 @@ class Assignment(TimestampedModel, models.Model):
 
 
 class Submission(TimestampedModel, models.Model):
+    class Status(models.TextChoices):
+        DRAFT = "DRAFT", "Draft"
+        SUBMITTED = "SUBMITTED", "Submitted"
+
     content = models.TextField(blank=True)
     title = models.CharField(max_length=255, blank=False)
     status = models.CharField(
-        max_length=15, blank=True, choices=SUBMISSION_CHOICES, default="SUBMITTED")
+        max_length=15, blank=True, choices=Status.choices, default=Status.SUBMITTED)
     score = models.FloatField(default=0.0)
     assignment = models.ForeignKey(
         Assignment, on_delete=models.CASCADE, related_name='submissions')
