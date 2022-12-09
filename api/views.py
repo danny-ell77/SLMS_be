@@ -1,22 +1,33 @@
-from pprint import pprint
-from urllib import response
-
+from django.db.models import Sum, Q
 from django.http import Http404
-from rest_framework import parsers, permissions, status
+from rest_framework import parsers, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
+import time
 from rest_framework.views import APIView
-from rest_framework_simplejwt.views import (TokenObtainPairView,
-                                            TokenRefreshView)
-
+from rest_framework_simplejwt.views import TokenRefreshView
 from api.permissions import IsInstructorOrReadOnly, IsStudentOrReadOnly
+from .services import FileDirectUploadService
+from .models import (
+    Assignment,
+    CourseMaterial,
+    Submission,
+    User,
+)
+from django.apps import apps
 
-from .models import (Assignment, ClassRoom, CourseMaterial, Instructor,
-                     Student, Submission, User)
-from .serializers import (AssignmentSerializer, CookieTokenRefreshSerializer,
-                          CourseMaterialSerializer, SubmissionSerializer,
-                          UserListSerializer, UserLoginSerializer,
-                          UserRegistrationSerializer)
+from .serializers import (
+    AssignmentSerializer,
+    CookieTokenRefreshSerializer,
+    CourseMaterialSerializer,
+    SubmissionSerializer,
+    UserLoginSerializer,
+    UserRegistrationSerializer,
+    CourseMaterialStartSerializer,
+    CourseMaterialFinishSerializer,
+    UserSerializer,
+)
 from .utils import cookie_details, get_tokens_for_user
 
 
@@ -24,31 +35,97 @@ class CookieTokenRefreshView(TokenRefreshView):
     serializer_class = CookieTokenRefreshSerializer
 
     def finalize_response(self, request, response, *args, **kwargs):
-        if response.data.get('refresh'):
-            response.set_cookie(
-                value=response.data["refresh"], **cookie_details)
-            del response.data['refresh']
+        if response.data.get("refresh"):
+            response.set_cookie(value=response.data["refresh"], **cookie_details)
+            del response.data["refresh"]
         return super().finalize_response(request, response, *args, **kwargs)
+
+
+class AccountInformation(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        user = User.objects.get(pk=request.user.pk)
+        if user.is_instructor:
+            data = {}
+        else:
+            profile = user.student
+            data = {
+                "cumulative_grades": self._get_cumulative_grades(profile),
+                "total_assignments": self._get_total_assignments(profile),
+                "submissions_progress": self._get_submissions_progress(profile),
+                # "latest_course_materials": self.get_latest_entities(
+                #     profile, "CourseMaterials"
+                # ),
+                "latest_assignments": self._get_latest_entities(profile, "Assignment"),
+            }
+        from pprint import pprint
+
+        pprint(data)
+        return Response(status=status.HTTP_200_OK)
+
+    def patch(self, request):
+        user = get_object_or_404(User, pk=request.user.pk)
+        print(request.data)
+        serializer = UserSerializer(user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        print(user.fullname)
+        data = {
+            "success": True,
+            "message": "Profile updated successfully",
+            "data": serializer.data,
+        }
+        return Response(data=data, status=status.HTTP_200_OK)
+
+    def _get_cumulative_grades(self, profile):
+
+        total_score = profile.submissions.all().aggregate(total_score=Sum("score"))
+        total_marks = profile.classroom.assignments.aggregate(total_score=Sum("marks"))
+
+        print(total_score, total_marks)
+        return ""
+        # return total_score / total_marks * 100
+
+    def _get_total_assignments(self, profile):
+        return profile.classroom.assignments.all().count()
+
+    def _get_submissions_progress(self, profile):
+        aqs = profile.submissions.all().count()
+        sqs = profile.submissions.filter(
+            Q(status="SUBMITTED") & Q(student=profile)
+        ).count()
+        # sqs = Submission.objects.filter(student=user.student).count()
+        # aqs = Submission.objects.filter(
+        #     Q(status="SUBMITTED") & Q(student=user.student)
+        # ).count()
+        if aqs == 0 and sqs == 0:
+            return 0
+        return sqs / aqs * 100
+
+    def _get_latest_entities(self, profile, klass):
+        Model = apps.get_model("api", klass)
+        return Model.objects.filter(classroom=profile.classroom)[:15]
 
 
 class UserLoginView(APIView):
     serializer_class = UserLoginSerializer
-    permission_classes = (AllowAny, )
+    permission_classes = (AllowAny,)
 
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
         valid = serializer.is_valid(raise_exception=True)
         if valid:
-            user = User.objects.get(pk=serializer.data['pk'])
+            user = User.objects.get(pk=serializer.data["pk"])
             auth_tokens = get_tokens_for_user(user)
             response = Response()
             response.set_cookie(value=auth_tokens["refresh"], **cookie_details)
             print(response)
             response.data = {
-                'success': True,
-                'message': 'You have logged in successfully',
-                'token': auth_tokens["access"],
-                'user': serializer.data
+                "success": True,
+                "message": "You have logged in successfully",
+                "token": auth_tokens["access"],
+                "user": serializer.data,
             }
             response.status_code = status.HTTP_200_OK
             return response
@@ -57,7 +134,7 @@ class UserLoginView(APIView):
 
 class UserRegistrationView(APIView):
     serializer_class = UserRegistrationSerializer
-    permission_classes = (AllowAny, )
+    permission_classes = (AllowAny,)
 
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
@@ -69,10 +146,10 @@ class UserRegistrationView(APIView):
             auth_tokens = get_tokens_for_user(user)
             response.set_cookie(value=auth_tokens["refresh"], **cookie_details)
             response.data = {
-                'success': True,
-                'message': 'Registration complete, welcome to SIMS!',
-                'token': auth_tokens["access"],
-                'user': serializer.data
+                "success": True,
+                "message": "Registration complete, welcome to SIMS!",
+                "token": auth_tokens["access"],
+                "user": serializer.data,
             }
             response.status_code = status.HTTP_201_CREATED
 
@@ -81,34 +158,36 @@ class UserRegistrationView(APIView):
 
 
 class AssignmentsListView(APIView):
-    '''
+    """
     List all Assignments or create a new one.
     Students & Instructors can list all assignments by Class
     and id respectively
     Only Instructors can create assignments
-    '''
+    """
+
     serializer_class = AssignmentSerializer
-    permission_classes = (IsInstructorOrReadOnly, )
+    permission_classes = (IsInstructorOrReadOnly,)
 
     def get(self, request):
         assignments = Assignment.objects.get_assignments(user=request.user)
         serializer = self.serializer_class(assignments, many=True)
         response_data = {
-            'success': True,
-            'message': 'Assignments fetched successfully',
-            'data': serializer.data
+            "success": True,
+            "message": "Assignments fetched successfully",
+            "data": serializer.data,
         }
         return Response(response_data, status=status.HTTP_200_OK)
 
     def post(self, request):
         serializer = self.serializer_class(
-            data=request.data, context={'request': request})
+            data=request.data, context={"request": request}
+        )
         if serializer.is_valid():
             serializer.save()
             response_data = {
-                'success': True,
-                'message': 'Assignment created successfully',
-                'data': serializer.data
+                "success": True,
+                "message": "Assignment created successfully",
+                "data": serializer.data,
             }
             return Response(response_data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -120,79 +199,84 @@ class AssignmentsDetailView(APIView):
     """
 
     serializer_class = AssignmentSerializer
-    permission_classes = (IsInstructorOrReadOnly, )
+    permission_classes = (IsInstructorOrReadOnly,)
 
-    def get_object(self, id):
+    def get_object(self, pk):
         try:
-            return Assignment.objects.get(pk=id)
+            return Assignment.objects.get(pk=pk)
         except Assignment.DoesNotExist:
             raise Http404
 
-    def get(self, request, id):
-        assignment = self.get_object(id)
+    def get(self, request, pk):
+        assignment = self.get_object(pk)
         serializer = self.serializer_class(assignment)
         response_data = {
-            'success': True,
-            'message': 'Assignment fetched successfully',
-            'data': serializer.data
+            "success": True,
+            "message": "Assignment fetched successfully",
+            "data": serializer.data,
         }
         return Response(response_data)
 
-    def patch(self, request, id):
+    def patch(self, request, pk):
         if request.user.is_instructor:
-            assignment = self.get_object(id)
+            assignment = self.get_object(pk)
             serializer = self.serializer_class(assignment, data=request.data)
             if serializer.is_valid():
                 serializer.save()
                 response_data = {
-                    'success': True,
-                    'message': 'Assignment updated successfully',
-                    'data': serializer.data
+                    "success": True,
+                    "message": "Assignment updated successfully",
+                    "data": serializer.data,
                 }
                 return Response(response_data)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        return Response({'error': 'Only Instructors can Update Assignments'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"error": "Only Instructors can Update Assignments"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
-    def delete(self, request, id):
-        print(id)
-        assignment = self.get_object(id)
+    def delete(self, request, pk):
+        print(pk)
+        assignment = self.get_object(pk)
         assignment.delete()
         response_data = {
-            'success': True,
-            'message': 'Assignment deleted successfully',
+            "success": True,
+            "message": "Assignment deleted successfully",
         }
         return Response(response_data, status=status.HTTP_204_NO_CONTENT)
 
 
 class SubmissionListView(APIView):
-    '''
+    """
     List all Submission or create a new one.
     Students & Instructors can list all assignments by id
     and class respectively
     Only Students can create assignments
-    '''
+    """
+
     serializer_class = SubmissionSerializer
-    permission_classes = (IsStudentOrReadOnly, )
+    permission_classes = (IsStudentOrReadOnly,)
 
     def get(self, request):
         submissions = Submission.objects.get_submissions(user=request.user)
         serializer = self.serializer_class(submissions, many=True)
         response_data = {
-            'success': True,
-            'message': 'Submissions fetched successfully',
-            'data': serializer.data
+            "success": True,
+            "message": "Submissions fetched successfully",
+            "data": serializer.data,
         }
         return Response(response_data, status=status.HTTP_200_OK)
 
     def post(self, request):
         serializer = self.serializer_class(
-            data=request.data, context={'request': request})
+            data=request.data, context={"request": request}
+        )
         if serializer.is_valid():
             serializer.save()
             response_data = {
-                'success': True,
-                'message': 'Submission created successfully',
-                'data': serializer.data
+                "success": True,
+                "message": "Submission created successfully",
+                "data": serializer.data,
             }
             return Response(response_data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -204,47 +288,55 @@ class SubmissionsDetailView(APIView):
     """
 
     serializer_class = SubmissionSerializer
-    permission_classes = (IsStudentOrReadOnly, )
+    # permission_classes = (IsStudentOrReadOnly, )
 
-    def get_object(self, id):
+    def get_object(self, pk):
         try:
-            return Submission.objects.get(pk=id)
+            return Submission.objects.get(pk=pk)
         except Submission.DoesNotExist:
             raise Http404
 
-    def get(self, request, id, format=None):
-        submission = self.get_object(id)
+    def get(self, request, pk, format=None):
+        submission = self.get_object(pk)
         serializer = self.serializer_class(submission)
         return Response(serializer.data)
 
-    def patch(self, request, id, format=None):
-        '''
-        Students are only capable of 
-        '''
-        submission = self.get_object(id)
-        serializer = self.serializer_class(submission, data=request.data)
-        if serializer.is_valid(raise_exception=True) and request.user.is_instructor:
+    def patch(self, request, pk, format=None):  # Mark Submission
+        """
+        Only Instructors are capable of editing submissions after submission
+        """
+        submission = self.get_object(pk)
+        print(submission.assignment.due.timestamp() * 1000, time.time(), "here====")
+        serializer = self.serializer_class(submission, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        if submission.assignment.due.timestamp() * 1000 < time.time():
+            response_data = {
+                "success": False,
+                "message": "Cannot mark submission after submission date",
+            }
+            return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
+
+        if request.user.is_student:
             serializer.save()
             response_data = {
-                'success': True,
-                'message': 'Submission marked successfully',
-                'data': serializer.data
+                "success": True,
+                "message": "Submission marked successfully",
+                "data": serializer.data,
             }
             return Response(response_data, status=status.HTTP_200_OK)
         response_data = {
-            'success': False,
-            'message': 'Only Instructors can mark assignments',
-            'data': serializer.errors
+            "success": False,
+            "message": "Only Instructors can mark assignments",
         }
         return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
 
-    def delete(self, request, id):
-        print(id)
-        submission = self.get_object(id)
+    def delete(self, request, pk):
+        print(pk)
+        submission = self.get_object(pk)
         submission.delete()
         response_data = {
-            'success': True,
-            'message': 'Submission deleted successfully',
+            "success": True,
+            "message": "Submission deleted successfully",
         }
         return Response(response_data, status=status.HTTP_204_NO_CONTENT)
 
@@ -255,24 +347,45 @@ class CourseMaterialsListView(APIView):
 
     def get(self, request):
         course_materials = CourseMaterial.objects.get_course_materials(
-            user=request.user)
+            user=request.user
+        )
         serializer = self.serializer_class(course_materials, many=True)
         response_data = {
-            'success': True,
-            'message': 'Course Materials fetched successfully',
-            'data': serializer.data
+            "success": True,
+            "message": "Course Materials fetched successfully",
+            "data": serializer.data,
         }
         return Response(response_data, status=status.HTTP_200_OK)
 
+
+class CourseMaterialStartUpload(APIView):
+    serializer_class = CourseMaterialStartSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        auth_user = get_object_or_404(User, id=request.user.pk)
+        service = FileDirectUploadService(auth_user)
+
+        presigned_data = service.start(**serializer.validated_data)
+
+        return Response(data=presigned_data)
+
+
+class CourseMaterialFinishUpload(APIView):
+    serializer_class = CourseMaterialFinishSerializer
+
     def post(self, request):
-        serializer = self.serializer_class(
-            data=request.data, context={'request': request})
-        if serializer.is_valid():
-            serializer.save()
-            response_data = {
-                'success': True,
-                'message': 'Course material uploaded successfully',
-                'data': serializer.data
-            }
-            return Response(response_data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer = self.serializer_class(data=request.data)
+        print(request.data)
+        serializer.is_valid(raise_exception=True)
+
+        file_id = serializer.validated_data["file_id"]
+
+        auth_user = get_object_or_404(User, id=request.user.pk)
+        service = FileDirectUploadService(auth_user)
+
+        file = get_object_or_404(CourseMaterial, id=file_id)
+        service.finish(file=file)
+
+        return Response({"id": file.id})

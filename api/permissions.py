@@ -1,5 +1,6 @@
 from rest_framework.permissions import BasePermission, SAFE_METHODS
 from .models import User
+from django.shortcuts import get_object_or_404
 
 
 class IsInstructorOrReadOnly(BasePermission):
@@ -7,7 +8,7 @@ class IsInstructorOrReadOnly(BasePermission):
 
     def has_permission(self, request, view):
         print("executed--")
-        user = User.objects.get(pk=request.user.pk)
+        user = get_object_or_404(User, pk=request.user.pk)
         if request.user.is_superuser:
             return True
 
@@ -26,7 +27,7 @@ class IsStudentOrReadOnly(BasePermission):
     edit_methods = ("PUT", "PATCH", "POST")
 
     def has_permission(self, request, view):
-        user = User.objects.get(pk=request.user.pk)
+        user = get_object_or_404(User, pk=request.user.pk)
         if request.user.is_superuser:
             return True
 
