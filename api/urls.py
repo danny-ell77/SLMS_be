@@ -11,6 +11,7 @@ from api.views import (
     CourseMaterialFinishUpload,
     CourseMaterialStartUpload,
     AccountInformation,
+    AttachmentFinishUpload,
 )
 
 urlpatterns = [
@@ -24,5 +25,6 @@ urlpatterns = [
     path("course-materials", CourseMaterialsListView.as_view()),
     path("course-material/start_upload", CourseMaterialStartUpload.as_view()),
     path("course-material/finish_upload", CourseMaterialFinishUpload.as_view()),
+    path("attachment/finish_upload", AttachmentFinishUpload.as_view()),
     path("profile", AccountInformation.as_view()),
 ]

@@ -12,7 +12,7 @@ cookie_details = dict(
 
 
 def file_generate_upload_path(instance, filename):
-    return f"{upload_type}/{instance.file_name}"
+    return f"file/{instance.file_name}"
 
 
 def get_tokens_for_user(user):

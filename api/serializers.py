@@ -76,7 +76,10 @@ class SubmissionSerializer(serializers.ModelSerializer):
     classroom = serializers.SlugRelatedField(
         slug_field="name", queryset=ClassRoom.objects.all(), many=False
     )
-    assignment = AssignmentSerializer(read_only=True)
+
+    has_attachment = serializers.BooleanField(default=False, required=False)
+    file_name = serializers.CharField(required=False)
+    file_type = serializers.CharField(required=False)
 
     class Meta:
         model = Submission
@@ -94,6 +97,10 @@ class SubmissionSerializer(serializers.ModelSerializer):
             "remark",
             "is_draft",
             "is_submitted",
+            "has_attachment",
+            'file',
+            "file_name",
+            "file_type",
         )
         extra_kwargs = {
             "instructor": {"write_only": True},
@@ -112,6 +119,9 @@ class SubmissionSerializer(serializers.ModelSerializer):
             )
         auth_user = self.context["request"].user
         validated_data["student"] = auth_user.student
+        for item in ["has_attachment", "file_name", "file_type"]:
+            if item in validated_data:
+                validated_data.pop(item)
         return super().create(validated_data)
 
 
@@ -235,7 +245,7 @@ class CourseMaterialSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class CourseMaterialStartSerializer(serializers.Serializer):
+class CourseMaterialUploadSerializer(serializers.Serializer):
     file_name = serializers.CharField()
     file_type = serializers.CharField()
     classroom = serializers.SlugRelatedField(
@@ -243,5 +253,13 @@ class CourseMaterialStartSerializer(serializers.Serializer):
     )
 
 
-class CourseMaterialFinishSerializer(serializers.Serializer):
+class FinishUploadSerializer(serializers.Serializer):
     file_id = serializers.IntegerField()
+
+
+class CourseMaterialFinishSerializer(FinishUploadSerializer):
+    ...
+
+
+class AttachmentFinishSerializer(FinishUploadSerializer):
+    ...

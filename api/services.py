@@ -3,16 +3,8 @@ from uuid import uuid4
 from .models import CourseMaterial
 from .aws_integrations import s3_generate_presigned_post
 from django.utils import timezone
-
-# def create_assignment_service(reequest, validated_data):
-#     assignment = Assignment.objects.filter(
-#         question=validated_data.get('question')).first()
-#     if assignment:
-#         raise ValidationError(
-#             'This assignment already exists!')
-#     auth_user = request.user
-#     validated_data["instructor"] = auth_user.instructor
-#     return Assignments.objects.create(validated_data)
+from django.shortcuts import get_object_or_404
+from api.models import User
 
 
 def file_generate_name(original_file_name):
@@ -21,32 +13,40 @@ def file_generate_name(original_file_name):
     return f"{uuid4().hex}{extension}"
 
 
-class FileDirectUploadService:
-    def __init__(self, user) -> None:
-        self.user = user
-
-    def start(self, file_name, file_type, classroom):
+class CourseMaterialService:
+    @classmethod
+    def save(cls, request, file_name, file_type, classroom):
+        user = get_object_or_404(User, pk=request.user.pk)
         cm = CourseMaterial(
             original_file_name=file_name,
             file_name=file_generate_name(file_name),
             file_type=file_type,
-            uploaded_by=self.user,
+            uploaded_by=user,
             classroom=classroom,
             file=None,
         )
         cm.save()
-        upload_path = f"file/{cm.file_name}"
-        cm.file = cm.file.field.attr_class(cm, cm.file.field, upload_path)
+        return cm
 
-        cm.save()
 
-        presigned_data = s3_generate_presigned_post(
-            file_path=upload_path, file_type=cm.file_type
+class FileDirectUploadService:
+    @classmethod
+    def start(cls, entity, file_name, file_type, **kwargs):
+        upload_path = f"file/{file_name}"
+        entity.file = entity.file.field.attr_class(
+            entity, entity.file.field, upload_path
         )
 
-        return {"id": cm.id, **presigned_data}
+        entity.save()
 
-    def finish(self, file):
+        presigned_data = s3_generate_presigned_post(
+            file_path=upload_path, file_type=file_type
+        )
+
+        return {"id": entity.id, **presigned_data}
+
+    @classmethod
+    def finish(cls, file):
         file.upload_finished_at = timezone.now()
         file.full_clean()
         file.save()

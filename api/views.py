@@ -8,7 +8,7 @@ import time
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenRefreshView
 from api.permissions import IsInstructorOrReadOnly, IsStudentOrReadOnly
-from .services import FileDirectUploadService
+from .services import FileDirectUploadService, CourseMaterialService
 from .models import (
     Assignment,
     CourseMaterial,
@@ -24,8 +24,9 @@ from .serializers import (
     SubmissionSerializer,
     UserLoginSerializer,
     UserRegistrationSerializer,
-    CourseMaterialStartSerializer,
+    CourseMaterialUploadSerializer,
     CourseMaterialFinishSerializer,
+    AttachmentFinishSerializer,
     UserSerializer,
 )
 from .utils import cookie_details, get_tokens_for_user
@@ -54,15 +55,15 @@ class AccountInformation(APIView):
                 "cumulative_grades": self._get_cumulative_grades(profile),
                 "total_assignments": self._get_total_assignments(profile),
                 "submissions_progress": self._get_submissions_progress(profile),
-                # "latest_course_materials": self.get_latest_entities(
-                #     profile, "CourseMaterials"
-                # ),
-                "latest_assignments": self._get_latest_entities(profile, "Assignment"),
+                "latest_course_materials": self._get_latest_entities(
+                    profile, "CourseMaterial", CourseMaterialSerializer
+                ),
+                "latest_assignments": self._get_latest_entities(
+                    profile, "Assignment", AssignmentSerializer
+                ),
             }
-        from pprint import pprint
 
-        pprint(data)
-        return Response(status=status.HTTP_200_OK)
+        return Response(status=status.HTTP_200_OK, data=data)
 
     def patch(self, request):
         user = get_object_or_404(User, pk=request.user.pk)
@@ -80,32 +81,32 @@ class AccountInformation(APIView):
 
     def _get_cumulative_grades(self, profile):
 
-        total_score = profile.submissions.all().aggregate(total_score=Sum("score"))
-        total_marks = profile.classroom.assignments.aggregate(total_score=Sum("marks"))
+        score = profile.submissions.all().aggregate(total_score=Sum("score"))
+        marks = profile.classroom.assignments.aggregate(total_marks=Sum("marks"))
 
-        print(total_score, total_marks)
-        return ""
-        # return total_score / total_marks * 100
+        return f"{score['total_score'] / marks['total_marks']:.2f}"
 
     def _get_total_assignments(self, profile):
         return profile.classroom.assignments.all().count()
 
     def _get_submissions_progress(self, profile):
-        aqs = profile.submissions.all().count()
+        aqs = profile.classroom.assignments.all().count()
         sqs = profile.submissions.filter(
             Q(status="SUBMITTED") & Q(student=profile)
         ).count()
+        print(aqs, sqs)
         # sqs = Submission.objects.filter(student=user.student).count()
         # aqs = Submission.objects.filter(
         #     Q(status="SUBMITTED") & Q(student=user.student)
         # ).count()
         if aqs == 0 and sqs == 0:
             return 0
-        return sqs / aqs * 100
+        return f"{sqs / aqs * 100:.2f}"
 
-    def _get_latest_entities(self, profile, klass):
+    def _get_latest_entities(self, profile, klass, serializer_class):
         Model = apps.get_model("api", klass)
-        return Model.objects.filter(classroom=profile.classroom)[:15]
+        qs = Model.objects.filter(classroom=profile.classroom)[:7]
+        return serializer_class(qs, many=True).data
 
 
 class UserLoginView(APIView):
@@ -268,18 +269,24 @@ class SubmissionListView(APIView):
         return Response(response_data, status=status.HTTP_200_OK)
 
     def post(self, request):
+        presigned_data = None
         serializer = self.serializer_class(
             data=request.data, context={"request": request}
         )
-        if serializer.is_valid():
-            serializer.save()
-            response_data = {
-                "success": True,
-                "message": "Submission created successfully",
-                "data": serializer.data,
-            }
-            return Response(response_data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
+        print(serializer.validated_data)
+        submission = serializer.save()
+        if serializer.validated_data.get("has_attachment", False):
+            presigned_data = FileDirectUploadService.start(
+                submission, **serializer.validated_data
+            )
+        response_data = {
+            "success": True,
+            "message": "Submission created successfully",
+            "data": serializer.data,
+            "attachment": presigned_data,
+        }
+        return Response(response_data, status=status.HTTP_201_CREATED)
 
 
 class SubmissionsDetailView(APIView):
@@ -359,15 +366,13 @@ class CourseMaterialsListView(APIView):
 
 
 class CourseMaterialStartUpload(APIView):
-    serializer_class = CourseMaterialStartSerializer
+    serializer_class = CourseMaterialUploadSerializer
 
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
-        auth_user = get_object_or_404(User, id=request.user.pk)
-        service = FileDirectUploadService(auth_user)
-
-        presigned_data = service.start(**serializer.validated_data)
+        cm = CourseMaterialService.save(request, **serializer.validated_data)
+        presigned_data = FileDirectUploadService.start(cm, **request.data)
 
         return Response(data=presigned_data)
 
@@ -382,10 +387,22 @@ class CourseMaterialFinishUpload(APIView):
 
         file_id = serializer.validated_data["file_id"]
 
-        auth_user = get_object_or_404(User, id=request.user.pk)
-        service = FileDirectUploadService(auth_user)
-
         file = get_object_or_404(CourseMaterial, id=file_id)
-        service.finish(file=file)
+        FileDirectUploadService.finish(file=file)
 
         return Response({"id": file.id})
+
+
+class AttachmentFinishUpload(APIView):
+    serializer_class = AttachmentFinishSerializer
+
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        file_id = serializer.validated_data["file_id"]
+
+        submission = get_object_or_404(Submission, id=file_id)
+        FileDirectUploadService.finish(file=submission)
+
+        return Response({"id": submission.id})

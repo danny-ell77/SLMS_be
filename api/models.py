@@ -138,12 +138,17 @@ class Submission(TimestampedModel, models.Model):
     )
     remark = models.CharField(max_length=255, blank=True, null=True)
 
-    # file = models.FileField(upload_to=file_generate_upload_path, blank=True, null=True)
+    file = models.FileField(upload_to=file_generate_upload_path, blank=True, null=True)
+    upload_finished_at = models.DateTimeField(blank=True, null=True)
 
     is_draft = models.BooleanField(default=False)
     is_submitted = models.BooleanField(default=False)
 
     objects = SubmissionsManager()
+
+    @property
+    def has_attachment(self):
+        bool(self.upload_finished_at)
 
     def __str__(self):
         return self.title
