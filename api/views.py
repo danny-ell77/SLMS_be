@@ -54,6 +54,7 @@ class AccountInformation(APIView):
             data = {
                 "cumulative_grades": self._get_cumulative_grades(profile),
                 "total_assignments": self._get_total_assignments(profile),
+                "total_submissions": self._get_total_submissions(profile),
                 "submissions_progress": self._get_submissions_progress(profile),
                 "latest_course_materials": self._get_latest_entities(
                     profile, "CourseMaterial", CourseMaterialSerializer
@@ -67,11 +68,9 @@ class AccountInformation(APIView):
 
     def patch(self, request):
         user = get_object_or_404(User, pk=request.user.pk)
-        print(request.data)
         serializer = UserSerializer(user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        print(user.fullname)
         data = {
             "success": True,
             "message": "Profile updated successfully",
@@ -84,10 +83,13 @@ class AccountInformation(APIView):
         score = profile.submissions.all().aggregate(total_score=Sum("score"))
         marks = profile.classroom.assignments.aggregate(total_marks=Sum("marks"))
 
-        return f"{score['total_score'] / marks['total_marks']:.2f}"
+        return f"{score['total_score'] / marks['total_marks']*100:.2f}"
 
     def _get_total_assignments(self, profile):
         return profile.classroom.assignments.all().count()
+
+    def _get_total_submissions(self, profile):
+        return profile.submissions.all().count()
 
     def _get_submissions_progress(self, profile):
         aqs = profile.classroom.assignments.all().count()
@@ -95,12 +97,9 @@ class AccountInformation(APIView):
             Q(status="SUBMITTED") & Q(student=profile)
         ).count()
         print(aqs, sqs)
-        # sqs = Submission.objects.filter(student=user.student).count()
-        # aqs = Submission.objects.filter(
-        #     Q(status="SUBMITTED") & Q(student=user.student)
-        # ).count()
+
         if aqs == 0 and sqs == 0:
-            return 0
+            return ""
         return f"{sqs / aqs * 100:.2f}"
 
     def _get_latest_entities(self, profile, klass, serializer_class):
@@ -229,7 +228,7 @@ class AssignmentsDetailView(APIView):
                     "message": "Assignment updated successfully",
                     "data": serializer.data,
                 }
-                return Response(response_data)
+                return Response(response_data, status=status.HTTP_200_OK)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         return Response(
             {"error": "Only Instructors can Update Assignments"},
@@ -240,11 +239,7 @@ class AssignmentsDetailView(APIView):
         print(pk)
         assignment = self.get_object(pk)
         assignment.delete()
-        response_data = {
-            "success": True,
-            "message": "Assignment deleted successfully",
-        }
-        return Response(response_data, status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class SubmissionListView(APIView):
@@ -313,7 +308,7 @@ class SubmissionsDetailView(APIView):
         Only Instructors are capable of editing submissions after submission
         """
         submission = self.get_object(pk)
-        print(submission.assignment.due.timestamp() * 1000, time.time(), "here====")
+        print(request.data)
         serializer = self.serializer_class(submission, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         if submission.assignment.due.timestamp() * 1000 < time.time():
@@ -323,19 +318,13 @@ class SubmissionsDetailView(APIView):
             }
             return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
 
-        if request.user.is_student:
-            serializer.save()
-            response_data = {
-                "success": True,
-                "message": "Submission marked successfully",
-                "data": serializer.data,
-            }
-            return Response(response_data, status=status.HTTP_200_OK)
+        serializer.save()
         response_data = {
-            "success": False,
-            "message": "Only Instructors can mark assignments",
+            "success": True,
+            "message": "Submission updated successfully",
+            "data": serializer.data,
         }
-        return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
+        return Response(response_data, status=status.HTTP_200_OK)
 
     def delete(self, request, pk):
         print(pk)

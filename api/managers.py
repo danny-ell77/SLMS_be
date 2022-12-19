@@ -40,16 +40,15 @@ class UserManager(BaseUserManager):
 class CourseMaterialManager(Manager):
     def get_course_materials(self, user):
         if user.is_student:
-            print(user.student.classroom)
             # return self.filter(Q(classroom=user.student.classroom) & Q(is_valid=True))
             return self.filter(classroom=user.student.classroom)
-        return self.filter(user=user)
+        return self.filter(uploaded_by=user)
 
 
 class SubmissionsManager(Manager):
     def get_submissions(self, user):
         if user.is_instructor:
-            return self.filter(instructor=user.instructor)
+            return self.filter(Q(instructor=user.instructor) & Q(is_draft=False))
         return self.filter(student=user.student)
 
 

@@ -75,7 +75,7 @@ class Student(TimestampedModel, models.Model):
     )  # used to determine who can upload materials
 
     def __str__(self):
-        return f"{self.user.fullname} from {self.classroom.name}"
+        return f"{self.user.fullname}"
 
 
 class Instructor(TimestampedModel, models.Model):
@@ -145,6 +145,13 @@ class Submission(TimestampedModel, models.Model):
     is_submitted = models.BooleanField(default=False)
 
     objects = SubmissionsManager()
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["assignment", "student"], name="unique_submission_for_student"
+            )
+        ]
 
     @property
     def has_attachment(self):

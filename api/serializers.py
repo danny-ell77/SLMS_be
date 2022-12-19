@@ -98,7 +98,7 @@ class SubmissionSerializer(serializers.ModelSerializer):
             "is_draft",
             "is_submitted",
             "has_attachment",
-            'file',
+            "file",
             "file_name",
             "file_type",
         )
@@ -115,7 +115,9 @@ class SubmissionSerializer(serializers.ModelSerializer):
         #     Q(content__icontains=validated_data.get('content') | Q(title__contains=validated_data.get('title'))))
         if submission and submission.status == "SUBMITTED":
             raise serializers.ValidationError(
-                "This submission already exists!, consider changing the Title or content"
+                {
+                    "detail": "This submission already exists!, consider changing the Title or content"
+                }
             )
         auth_user = self.context["request"].user
         validated_data["student"] = auth_user.student
@@ -123,6 +125,30 @@ class SubmissionSerializer(serializers.ModelSerializer):
             if item in validated_data:
                 validated_data.pop(item)
         return super().create(validated_data)
+
+    def validate(self, data):
+        student = None
+        if request := self.context.get("request"):
+            student = request.user.student
+
+        if Submission.objects.filter(
+            assignment=data.get("assignment"),
+            student=student,
+        ).exists():
+            raise serializers.ValidationError(
+                {"detail": "A Submission with this user already exists"}
+            )
+
+        return data
+
+    def update(self, instance, validated_data):
+        if validated_data.get("score", 0) > instance.assignment.marks:
+            raise serializers.ValidationError(
+                {
+                    "detail": "The student's score cannot exceed the mark alloted to this assignment"
+                }
+            )
+        return super().update(instance, validated_data)
 
 
 class ClassRoomSerializer(serializers.ModelSerializer):
